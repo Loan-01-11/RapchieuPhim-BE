@@ -3,6 +3,30 @@
   "WorkspaceRootPath": "C:\\Users\\gemma\\source\\repos\\RapchieuPhim-BE\\RapchieuPhim.API\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{FEAEA64B-6E21-4D5A-8AD4-82A00D4782F8}|RapchieuPhim.API.csproj|c:\\users\\gemma\\source\\repos\\rapchieuphim-be\\rapchieuphim.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{FEAEA64B-6E21-4D5A-8AD4-82A00D4782F8}|RapchieuPhim.API.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{FEAEA64B-6E21-4D5A-8AD4-82A00D4782F8}|RapchieuPhim.API.csproj|c:\\users\\gemma\\source\\repos\\rapchieuphim-be\\rapchieuphim.api\\controllers\\paymentscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{FEAEA64B-6E21-4D5A-8AD4-82A00D4782F8}|RapchieuPhim.API.csproj|solutionrelative:controllers\\paymentscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{FEAEA64B-6E21-4D5A-8AD4-82A00D4782F8}|RapchieuPhim.API.csproj|c:\\users\\gemma\\source\\repos\\rapchieuphim-be\\rapchieuphim.api\\controllers\\bookingscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{FEAEA64B-6E21-4D5A-8AD4-82A00D4782F8}|RapchieuPhim.API.csproj|solutionrelative:controllers\\bookingscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{FEAEA64B-6E21-4D5A-8AD4-82A00D4782F8}|RapchieuPhim.API.csproj|c:\\users\\gemma\\source\\repos\\rapchieuphim-be\\rapchieuphim.api\\controllers\\areascontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{FEAEA64B-6E21-4D5A-8AD4-82A00D4782F8}|RapchieuPhim.API.csproj|solutionrelative:controllers\\areascontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{FEAEA64B-6E21-4D5A-8AD4-82A00D4782F8}|RapchieuPhim.API.csproj|c:\\users\\gemma\\source\\repos\\rapchieuphim-be\\rapchieuphim.api\\controllers\\moviescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{FEAEA64B-6E21-4D5A-8AD4-82A00D4782F8}|RapchieuPhim.API.csproj|solutionrelative:controllers\\moviescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{FEAEA64B-6E21-4D5A-8AD4-82A00D4782F8}|RapchieuPhim.API.csproj|c:\\users\\gemma\\source\\repos\\rapchieuphim-be\\rapchieuphim.api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{FEAEA64B-6E21-4D5A-8AD4-82A00D4782F8}|RapchieuPhim.API.csproj|solutionrelative:appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{FEAEA64B-6E21-4D5A-8AD4-82A00D4782F8}|RapchieuPhim.API.csproj|c:\\users\\gemma\\source\\repos\\rapchieuphim-be\\rapchieuphim.api\\properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
       "RelativeMoniker": "D:0:0:{FEAEA64B-6E21-4D5A-8AD4-82A00D4782F8}|RapchieuPhim.API.csproj|solutionrelative:properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     }
@@ -14,11 +38,88 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 4,
           "Children": [
             {
               "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "BookingsController.cs",
+              "DocumentMoniker": "C:\\Users\\gemma\\source\\repos\\RapchieuPhim-BE\\RapchieuPhim.API\\Controllers\\BookingsController.cs",
+              "RelativeDocumentMoniker": "Controllers\\BookingsController.cs",
+              "ToolTip": "C:\\Users\\gemma\\source\\repos\\RapchieuPhim-BE\\RapchieuPhim.API\\Controllers\\BookingsController.cs",
+              "RelativeToolTip": "Controllers\\BookingsController.cs",
+              "ViewState": "AgIAADYAAAAAAAAAAAAowAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-03T18:06:05.197Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "AreasController.cs",
+              "DocumentMoniker": "C:\\Users\\gemma\\source\\repos\\RapchieuPhim-BE\\RapchieuPhim.API\\Controllers\\AreasController.cs",
+              "RelativeDocumentMoniker": "Controllers\\AreasController.cs",
+              "ToolTip": "C:\\Users\\gemma\\source\\repos\\RapchieuPhim-BE\\RapchieuPhim.API\\Controllers\\AreasController.cs",
+              "RelativeToolTip": "Controllers\\AreasController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-03T18:06:04.488Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "PaymentsController.cs",
+              "DocumentMoniker": "C:\\Users\\gemma\\source\\repos\\RapchieuPhim-BE\\RapchieuPhim.API\\Controllers\\PaymentsController.cs",
+              "RelativeDocumentMoniker": "Controllers\\PaymentsController.cs",
+              "ToolTip": "C:\\Users\\gemma\\source\\repos\\RapchieuPhim-BE\\RapchieuPhim.API\\Controllers\\PaymentsController.cs",
+              "RelativeToolTip": "Controllers\\PaymentsController.cs",
+              "ViewState": "AgIAABgAAAAAAAAAAAAYwDEAAAAyAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-03T18:06:02.281Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "MoviesController.cs",
+              "DocumentMoniker": "C:\\Users\\gemma\\source\\repos\\RapchieuPhim-BE\\RapchieuPhim.API\\Controllers\\MoviesController.cs",
+              "RelativeDocumentMoniker": "Controllers\\MoviesController.cs",
+              "ToolTip": "C:\\Users\\gemma\\source\\repos\\RapchieuPhim-BE\\RapchieuPhim.API\\Controllers\\MoviesController.cs",
+              "RelativeToolTip": "Controllers\\MoviesController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAEcAAABUAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-03T17:44:17.361Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\gemma\\source\\repos\\RapchieuPhim-BE\\RapchieuPhim.API\\Program.cs",
+              "RelativeDocumentMoniker": "Program.cs",
+              "ToolTip": "C:\\Users\\gemma\\source\\repos\\RapchieuPhim-BE\\RapchieuPhim.API\\Program.cs",
+              "RelativeToolTip": "Program.cs",
+              "ViewState": "AgIAAB4AAAAAAAAAAAAAADAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-03T17:36:43.924Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "C:\\Users\\gemma\\source\\repos\\RapchieuPhim-BE\\RapchieuPhim.API\\appsettings.json",
+              "RelativeDocumentMoniker": "appsettings.json",
+              "ToolTip": "C:\\Users\\gemma\\source\\repos\\RapchieuPhim-BE\\RapchieuPhim.API\\appsettings.json",
+              "RelativeToolTip": "appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-06-03T17:36:06.916Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
               "Title": "launchSettings.json",
               "DocumentMoniker": "C:\\Users\\gemma\\source\\repos\\RapchieuPhim-BE\\RapchieuPhim.API\\Properties\\launchSettings.json",
               "RelativeDocumentMoniker": "Properties\\launchSettings.json",
@@ -26,8 +127,7 @@
               "RelativeToolTip": "Properties\\launchSettings.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-06-03T16:46:56.603Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-06-03T16:46:56.603Z"
             }
           ]
         }

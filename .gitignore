@@ -1,12 +1,32 @@
-﻿################################################################################
-# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
-################################################################################
+## Build output
+bin/
+obj/
 
-/RapchieuPhim.API/.vs/RapchieuPhim.API/CopilotIndices/17.14.1681.23550/CodeChunks.db-shm
-/RapchieuPhim.API/.vs/RapchieuPhim.API/CopilotIndices/17.14.1681.23550/CodeChunks.db-wal
-/RapchieuPhim.API/.vs/RapchieuPhim.API/CopilotIndices/17.14.1681.23550/SemanticSymbols.db-shm
-/RapchieuPhim.API/.vs/RapchieuPhim.API/CopilotIndices/17.14.1681.23550/SemanticSymbols.db-wal
-/RapchieuPhim.API/.vs/RapchieuPhim.API/CopilotIndices/17.14.1681.23550/CodeChunks.db
-/RapchieuPhim.API/.vs/RapchieuPhim.API/CopilotIndices/17.14.1681.23550/SemanticSymbols.db
-/RapchieuPhim.API/.vs/RapchieuPhim.API/v17/.suo
-/RapchieuPhim.API/.vs/RapchieuPhim.API/v17/DocumentLayout.backup.json
+## Visual Studio files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## User-specific files
+*.rsuser
+
+## Rider
+.idea/
+*.sln.iml
+
+## OS files
+.DS_Store
+Thumbs.db
+
+## NuGet
+*.nupkg
+.nuget/
+packages/
+
+## Logs
+*.log
+
+## Secrets – never commit connection strings or keys
+appsettings.Development.json
