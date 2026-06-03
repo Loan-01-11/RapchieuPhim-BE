@@ -1,0 +1,53 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\gemma\\source\\repos\\RapchieuPhim-BE\\RapchieuPhim.API\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{FEAEA64B-6E21-4D5A-8AD4-82A00D4782F8}|RapchieuPhim.API.csproj|c:\\users\\gemma\\source\\repos\\rapchieuphim-be\\rapchieuphim.api\\properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{FEAEA64B-6E21-4D5A-8AD4-82A00D4782F8}|RapchieuPhim.API.csproj|solutionrelative:properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{FEAEA64B-6E21-4D5A-8AD4-82A00D4782F8}|RapchieuPhim.API.csproj|c:\\users\\gemma\\source\\repos\\rapchieuphim-be\\rapchieuphim.api\\rapchieuphim.api.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|",
+      "RelativeMoniker": "D:0:0:{FEAEA64B-6E21-4D5A-8AD4-82A00D4782F8}|RapchieuPhim.API.csproj|solutionrelative:rapchieuphim.api.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "launchSettings.json",
+              "DocumentMoniker": "C:\\Users\\gemma\\source\\repos\\RapchieuPhim-BE\\RapchieuPhim.API\\Properties\\launchSettings.json",
+              "RelativeDocumentMoniker": "Properties\\launchSettings.json",
+              "ToolTip": "C:\\Users\\gemma\\source\\repos\\RapchieuPhim-BE\\RapchieuPhim.API\\Properties\\launchSettings.json",
+              "RelativeToolTip": "Properties\\launchSettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-06-03T16:46:56.603Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "RapchieuPhim.API",
+              "DocumentMoniker": "C:\\Users\\gemma\\source\\repos\\RapchieuPhim-BE\\RapchieuPhim.API\\RapchieuPhim.API.csproj",
+              "RelativeDocumentMoniker": "RapchieuPhim.API.csproj",
+              "ToolTip": "C:\\Users\\gemma\\source\\repos\\RapchieuPhim-BE\\RapchieuPhim.API\\RapchieuPhim.API.csproj",
+              "RelativeToolTip": "RapchieuPhim.API.csproj",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-06-03T16:46:49.154Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
