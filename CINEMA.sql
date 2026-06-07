@@ -57,7 +57,7 @@ CREATE TABLE USERS (
     Address         NVARCHAR(255) NULL,
     RewardPoint     INT           NOT NULL DEFAULT 0,
     MembershipLevel NVARCHAR(50)  NULL,   -- Bronze | Silver | Gold | Platinum
-    Role            INT           NOT NULL,
+    Role            NVARCHAR(50)  NOT NULL,
     IsActive        BIT           NOT NULL DEFAULT 1,
     CreatedAt       DATETIME      NOT NULL DEFAULT GETDATE(),
     CONSTRAINT PK_USERS       PRIMARY KEY (UserId),
