@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 
@@ -41,7 +41,7 @@ public partial class CinemaManagementContext : DbContext
 
     public virtual DbSet<Review> Reviews { get; set; }
 
-    public virtual DbSet<Role> Roles { get; set; }
+
 
     public virtual DbSet<Room> Rooms { get; set; }
 
@@ -70,8 +70,8 @@ public partial class CinemaManagementContext : DbContext
     public virtual DbSet<VwShowtimeDetail> VwShowtimeDetails { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Server=GEMMA;Database=CinemaManagement;User Id=sa;Password=12345;TrustServerCertificate=True;");
+    {
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -396,14 +396,7 @@ public partial class CinemaManagementContext : DbContext
                 .HasConstraintName("FK_REV_USER");
         });
 
-        modelBuilder.Entity<Role>(entity =>
-        {
-            entity.ToTable("ROLES");
 
-            entity.HasIndex(e => e.RoleName, "UQ_ROLES_NAME").IsUnique();
-
-            entity.Property(e => e.RoleName).HasMaxLength(50);
-        });
 
         modelBuilder.Entity<Room>(entity =>
         {
@@ -565,7 +558,7 @@ public partial class CinemaManagementContext : DbContext
         {
             entity.ToTable("USERS");
 
-            entity.HasIndex(e => e.RoleId, "IDX_USERS_ROLE");
+            entity.HasIndex(e => e.Role, "IDX_USERS_ROLE");
 
             entity.HasIndex(e => e.Email, "UQ_USERS_EMAIL").IsUnique();
 
@@ -581,11 +574,9 @@ public partial class CinemaManagementContext : DbContext
             entity.Property(e => e.MembershipLevel).HasMaxLength(50);
             entity.Property(e => e.PasswordHash).HasMaxLength(255);
             entity.Property(e => e.Phone).HasMaxLength(20);
-
-            entity.HasOne(d => d.Role).WithMany(p => p.Users)
-                .HasForeignKey(d => d.RoleId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_USERS_ROLE");
+            entity.Property(e => e.Role)
+                .HasMaxLength(50)
+                .HasDefaultValue("Customer");
         });
 
         modelBuilder.Entity<Userdiscountusage>(entity =>
