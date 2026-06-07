@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace RapchieuPhim.API.DTOs.Auth
 {
-    // ── Đăng nhập bằng tài khoản (Email + Password) ─────────────────────────
+    // ── Đăng nhập bằng tài khoản Email + Password ─────────────────────────
     public class LoginRequest
     {
         [Required(ErrorMessage = "Email không được để trống.")]
@@ -14,7 +14,7 @@ namespace RapchieuPhim.API.DTOs.Auth
         public string Password { get; set; } = null!;
     }
 
-    // ── Đăng ký tài khoản thường ─────────────────────────────────────────────
+    // ── Đăng ký tài khoản thường ─────────────────────────────────────────
     public class RegisterRequest
     {
         [Required(ErrorMessage = "Họ tên không được để trống.")]
@@ -33,7 +33,7 @@ namespace RapchieuPhim.API.DTOs.Auth
 
         /// <summary>
         /// Ngày sinh – FE gửi dưới dạng string "yyyy-MM-dd", ví dụ: "2000-01-15"
-        /// Dùng string thay vì DateOnly để tránh lỗi deserialize JSON
+        /// Dùng string thay vì DateOnly để tránh lỗi deserialize JSON.
         /// </summary>
         [Required(ErrorMessage = "Ngày sinh không được để trống.")]
         public string DateOfBirth { get; set; } = null!;
@@ -42,16 +42,23 @@ namespace RapchieuPhim.API.DTOs.Auth
 
         [Required(ErrorMessage = "Số điện thoại không được để trống.")]
         public string Phone { get; set; } = null!;
+
+        /// <summary>
+        /// RoleName dùng để đăng ký theo vai trò.
+        /// Cho phép: Admin, Staff, Customer.
+        /// Nếu không gửi thì mặc định là Customer.
+        /// </summary>
+        public string? RoleName { get; set; } = "Customer";
     }
 
-    // ── Đăng nhập / kiểm tra Google ──────────────────────────────────────────
+    // ── Đăng nhập / kiểm tra Google ──────────────────────────────────────
     public class GoogleAuthRequest
     {
         [Required(ErrorMessage = "Google ID token không được để trống.")]
         public string IdToken { get; set; } = null!;
     }
 
-    // ── Hoàn tất đăng ký sau khi xác thực Google ─────────────────────────────
+    // ── Hoàn tất đăng ký sau khi xác thực Google ─────────────────────────
     public class GoogleRegisterCompleteRequest
     {
         [Required(ErrorMessage = "Google ID token không được để trống.")]
@@ -64,7 +71,7 @@ namespace RapchieuPhim.API.DTOs.Auth
         public string Phone { get; set; } = null!;
 
         /// <summary>
-        /// Ngày sinh – FE gửi string "yyyy-MM-dd"
+        /// Ngày sinh – FE gửi string "yyyy-MM-dd".
         /// </summary>
         [Required(ErrorMessage = "Ngày sinh không được để trống.")]
         public string DateOfBirth { get; set; } = null!;
@@ -72,7 +79,7 @@ namespace RapchieuPhim.API.DTOs.Auth
         public string? Gender { get; set; }
     }
 
-    // ── Response khi Google token hợp lệ nhưng chưa có tài khoản ───────────
+    // ── Response khi Google token hợp lệ nhưng chưa có tài khoản ─────────
     public class GoogleProfileResponse
     {
         public bool NeedsAdditionalInfo { get; set; } = true;
@@ -82,10 +89,7 @@ namespace RapchieuPhim.API.DTOs.Auth
         public string Message { get; set; } = "Vui lòng bổ sung thông tin để hoàn tất đăng ký.";
     }
 
-    // ── Quên mật khẩu: Bước 1 – Gửi OTP ────────────────────────────────────
-    /// <summary>
-    /// FE gửi email → BE sinh OTP 6 số, lưu cache 5 phút, gửi về Gmail.
-    /// </summary>
+    // ── Quên mật khẩu: Bước 1 – Gửi OTP ─────────────────────────────────
     public class ForgotPasswordRequest
     {
         [Required(ErrorMessage = "Email không được để trống.")]
@@ -93,10 +97,7 @@ namespace RapchieuPhim.API.DTOs.Auth
         public string Email { get; set; } = null!;
     }
 
-    // ── Quên mật khẩu: Bước 2 – Đặt lại mật khẩu ──────────────────────────
-    /// <summary>
-    /// FE gửi email + OTP + mật khẩu mới → BE xác nhận OTP và cập nhật password.
-    /// </summary>
+    // ── Quên mật khẩu: Bước 2 – Đặt lại mật khẩu ────────────────────────
     public class ResetPasswordRequest
     {
         [Required(ErrorMessage = "Email không được để trống.")]
@@ -115,7 +116,7 @@ namespace RapchieuPhim.API.DTOs.Auth
         public string ConfirmPassword { get; set; } = null!;
     }
 
-    // ── Response sau khi đăng nhập / đăng ký thành công ─────────────────────
+    // ── Response sau khi đăng nhập / đăng ký thành công ─────────────────
     public class AuthResponse
     {
         public string Token { get; set; } = null!;

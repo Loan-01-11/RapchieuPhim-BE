@@ -66,11 +66,9 @@ namespace RapchieuPhim.API.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(new { Message = GetFirstError(), Errors = ModelState });
 
-            // Kiểm tra mật khẩu khớp
             if (request.Password != request.ConfirmPassword)
                 return BadRequest(new { Message = "Mật khẩu xác nhận không khớp." });
 
-            // Parse DateOfBirth từ string "yyyy-MM-dd"
             if (!DateOnly.TryParseExact(request.DateOfBirth, "yyyy-MM-dd",
                     CultureInfo.InvariantCulture, DateTimeStyles.None, out var dob))
                 return BadRequest(new { Message = "Ngày sinh không đúng định dạng. Vui lòng dùng định dạng yyyy-MM-dd (ví dụ: 2000-01-15)." });
@@ -78,28 +76,36 @@ namespace RapchieuPhim.API.Controllers
             var email = request.Email.Trim();
             var phone = request.Phone.Trim();
 
-            // Kiểm tra email đã tồn tại (so sánh case-insensitive nhờ DB collation)
             if (await _context.Users.AnyAsync(u => u.Email == email))
                 return Conflict(new { Message = "Email này đã được đăng ký. Vui lòng sử dụng email khác hoặc đăng nhập." });
 
+            var roleName = string.IsNullOrWhiteSpace(request.RoleName)
+                ? "Customer"
+                : request.RoleName.Trim();
+
+            var allowedRoles = new[] { "Admin", "Staff", "Customer" };
+
+            if (!allowedRoles.Contains(roleName))
+                return BadRequest(new { Message = "Role chỉ được là Admin, Staff hoặc Customer." });
+
             var user = new User
             {
-                FullName     = request.FullName.Trim(),
-                Email        = email,
+                FullName = request.FullName.Trim(),
+                Email = email,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-                Phone        = phone,
-                Gender       = string.IsNullOrWhiteSpace(request.Gender) ? null : request.Gender.Trim(),
-                DateOfBirth  = dob,
-                Role         = "Customer",
-                RewardPoint  = 0,
-                IsActive     = true,
-                CreatedAt    = DateTime.Now
+                Phone = phone,
+                Gender = string.IsNullOrWhiteSpace(request.Gender) ? null : request.Gender.Trim(),
+                DateOfBirth = dob,
+                Role = roleName,
+                RewardPoint = 0,
+                IsActive = true,
+                CreatedAt = DateTime.Now
             };
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            return Ok(new { Message = "Đăng ký thành công!", UserId = user.UserId });
+            return Ok(BuildAuthResponse(user));
         }
 
         // ── 3. ĐĂNG NHẬP BẰNG GOOGLE ────────────────────────────────────────

@@ -70,7 +70,17 @@ public partial class CinemaManagementContext : DbContext
     public virtual DbSet<VwShowtimeDetail> VwShowtimeDetails { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+
+       => optionsBuilder.UseSqlServer(GetConnectionString());
+    private string GetConnectionString()
     {
+        IConfiguration config = new ConfigurationBuilder()
+             .SetBasePath(AppContext.BaseDirectory)
+                    .AddJsonFile("appsettings.json", true, true)
+                    .Build();
+        var strConn = config["ConnectionStrings:DefaultConnection"];
+
+        return strConn;
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
