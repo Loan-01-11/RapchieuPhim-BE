@@ -21,12 +21,12 @@ GO
 
 -- ============================================================
 -- 1. ROLES  (UC-16 Management account - role-based access)
---    Values: Customer | Staff | Admin
+--   Values: Customer | Staff | Admin
 -- ============================================================
 CREATE TABLE ROLES (
-    RoleId   INT          NOT NULL IDENTITY(1,1),
+    Role     INT          NOT NULL IDENTITY(1,1),
     RoleName NVARCHAR(50) NOT NULL,
-    CONSTRAINT PK_ROLES      PRIMARY KEY (RoleId),
+    CONSTRAINT PK_ROLES      PRIMARY KEY (Role),
     CONSTRAINT UQ_ROLES_NAME UNIQUE (RoleName)
 );
 GO
@@ -35,8 +35,8 @@ GO
 -- 2. AREAS  (UC-03 Select area - filter cinemas by city/region)
 -- ============================================================
 CREATE TABLE AREAS (
-    AreaId   INT           NOT NULL IDENTITY(1,1),
-    AreaName NVARCHAR(100) NOT NULL,
+    AreaId   INT            NOT NULL IDENTITY(1,1),
+    AreaName NVARCHAR(100)  NOT NULL,
     CONSTRAINT PK_AREAS      PRIMARY KEY (AreaId),
     CONSTRAINT UQ_AREAS_NAME UNIQUE (AreaName)
 );
@@ -57,13 +57,13 @@ CREATE TABLE USERS (
     Address         NVARCHAR(255) NULL,
     RewardPoint     INT           NOT NULL DEFAULT 0,
     MembershipLevel NVARCHAR(50)  NULL,   -- Bronze | Silver | Gold | Platinum
-    RoleId          INT           NOT NULL,
+    Role            INT           NOT NULL,
     IsActive        BIT           NOT NULL DEFAULT 1,
     CreatedAt       DATETIME      NOT NULL DEFAULT GETDATE(),
     CONSTRAINT PK_USERS       PRIMARY KEY (UserId),
     CONSTRAINT UQ_USERS_EMAIL UNIQUE (Email),
-    CONSTRAINT FK_USERS_ROLE  FOREIGN KEY (RoleId)
-        REFERENCES ROLES (RoleId)
+    CONSTRAINT FK_USERS_ROLE  FOREIGN KEY (Role)
+        REFERENCES ROLES (Role)
         ON UPDATE CASCADE
         ON DELETE NO ACTION
 );
@@ -71,7 +71,7 @@ GO
 
 -- ============================================================
 -- 4. CINEMAS  (UC-15 Manage theaters)
---    AreaId added for UC-03 Select area filtering
+--   AreaId added for UC-03 Select area filtering
 -- ============================================================
 CREATE TABLE CINEMAS (
     CinemaId   INT           NOT NULL IDENTITY(1,1),
@@ -263,14 +263,14 @@ CREATE TABLE REVIEWS (
     Comment    NVARCHAR(MAX) NULL,
     ReviewDate DATETIME      NOT NULL DEFAULT GETDATE(),
     IsApproved BIT           NOT NULL DEFAULT 0,  -- admin moderation
-    CONSTRAINT PK_REVIEWS           PRIMARY KEY (ReviewId),
-    CONSTRAINT CK_RATING            CHECK (Rating BETWEEN 1 AND 10),
+    CONSTRAINT PK_REVIEWS            PRIMARY KEY (ReviewId),
+    CONSTRAINT CK_RATING             CHECK (Rating BETWEEN 1 AND 10),
     CONSTRAINT UQ_USER_MOVIE_REVIEW UNIQUE (UserId, MovieId),
-    CONSTRAINT FK_REV_USER          FOREIGN KEY (UserId)
+    CONSTRAINT FK_REV_USER           FOREIGN KEY (UserId)
         REFERENCES USERS (UserId)
         ON UPDATE CASCADE
         ON DELETE NO ACTION,
-    CONSTRAINT FK_REV_MOVIE         FOREIGN KEY (MovieId)
+    CONSTRAINT FK_REV_MOVIE          FOREIGN KEY (MovieId)
         REFERENCES MOVIES (MovieId)
         ON UPDATE CASCADE
         ON DELETE NO ACTION
@@ -565,7 +565,7 @@ GO
 -- ============================================================
 -- INDEXES
 -- ============================================================
-CREATE INDEX IDX_USERS_ROLE    ON USERS       (RoleId);
+CREATE INDEX IDX_USERS_ROLE    ON USERS       (Role);
 CREATE INDEX IDX_CINEMAS_AREA  ON CINEMAS     (AreaId);
 CREATE INDEX IDX_ROOMS_CINEMA  ON ROOMS       (CinemaId);
 CREATE INDEX IDX_SEATS_ROOM    ON SEATS       (RoomId);
