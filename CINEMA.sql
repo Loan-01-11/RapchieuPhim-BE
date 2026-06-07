@@ -19,7 +19,17 @@ GO
 USE CinemaManagement;
 GO
 
--- Roles table is removed. Role is now a string column 'Role' directly on the USERS table.
+-- ============================================================
+-- 1. ROLES  (UC-16 Management account - role-based access)
+--    Values: Customer | Staff | Admin
+-- ============================================================
+CREATE TABLE ROLES (
+    RoleId   INT          NOT NULL IDENTITY(1,1),
+    RoleName NVARCHAR(50) NOT NULL,
+    CONSTRAINT PK_ROLES      PRIMARY KEY (RoleId),
+    CONSTRAINT UQ_ROLES_NAME UNIQUE (RoleName)
+);
+GO
 
 -- ============================================================
 -- 2. AREAS  (UC-03 Select area - filter cinemas by city/region)
@@ -47,11 +57,15 @@ CREATE TABLE USERS (
     Address         NVARCHAR(255) NULL,
     RewardPoint     INT           NOT NULL DEFAULT 0,
     MembershipLevel NVARCHAR(50)  NULL,   -- Bronze | Silver | Gold | Platinum
-    Role            NVARCHAR(50)  NOT NULL DEFAULT 'Customer',
+    RoleId          INT           NOT NULL,
     IsActive        BIT           NOT NULL DEFAULT 1,
     CreatedAt       DATETIME      NOT NULL DEFAULT GETDATE(),
     CONSTRAINT PK_USERS       PRIMARY KEY (UserId),
-    CONSTRAINT UQ_USERS_EMAIL UNIQUE (Email)
+    CONSTRAINT UQ_USERS_EMAIL UNIQUE (Email),
+    CONSTRAINT FK_USERS_ROLE  FOREIGN KEY (RoleId)
+        REFERENCES ROLES (RoleId)
+        ON UPDATE CASCADE
+        ON DELETE NO ACTION
 );
 GO
 
@@ -551,7 +565,7 @@ GO
 -- ============================================================
 -- INDEXES
 -- ============================================================
-CREATE INDEX IDX_USERS_ROLE    ON USERS       (Role);
+CREATE INDEX IDX_USERS_ROLE    ON USERS       (RoleId);
 CREATE INDEX IDX_CINEMAS_AREA  ON CINEMAS     (AreaId);
 CREATE INDEX IDX_ROOMS_CINEMA  ON ROOMS       (CinemaId);
 CREATE INDEX IDX_SEATS_ROOM    ON SEATS       (RoomId);
