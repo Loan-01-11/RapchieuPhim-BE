@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace RapchieuPhim.API.Models;
@@ -27,7 +27,7 @@ public partial class User
 
     public string? MembershipLevel { get; set; }
 
-    public int RoleId { get; set; }
+    public string Role { get; set; } = null!;
 
     public bool IsActive { get; set; }
 
@@ -51,7 +51,7 @@ public partial class User
 
     public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
 
-    public virtual Role Role { get; set; } = null!;
+
 
     public virtual ICollection<Staffreport> Staffreports { get; set; } = new List<Staffreport>();
 

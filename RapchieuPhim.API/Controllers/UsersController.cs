@@ -32,7 +32,7 @@ namespace RapchieuPhim.API.Controllers
                     u.Address,
                     u.RewardPoint,
                     u.MembershipLevel,
-                    u.RoleId,
+                    u.Role,
                     u.IsActive,
                     u.CreatedAt
                     // PasswordHash intentionally excluded from list responses
@@ -59,7 +59,7 @@ namespace RapchieuPhim.API.Controllers
                     u.Address,
                     u.RewardPoint,
                     u.MembershipLevel,
-                    u.RoleId,
+                    u.Role,
                     u.IsActive,
                     u.CreatedAt
                 })
@@ -113,13 +113,13 @@ namespace RapchieuPhim.API.Controllers
             return NoContent();
         }
 
-        // GET: api/Users/ByRole/{roleId}
-        [HttpGet("ByRole/{roleId}")]
-        public async Task<IActionResult> GetByRole(int roleId)
+        // GET: api/Users/ByRole/{role}
+        [HttpGet("ByRole/{role}")]
+        public async Task<IActionResult> GetByRole(string role)
         {
             var users = await _context.Users
-                .Where(u => u.RoleId == roleId && u.IsActive)
-                .Select(u => new { u.UserId, u.FullName, u.Email, u.RoleId })
+                .Where(u => u.Role == role && u.IsActive)
+                .Select(u => new { u.UserId, u.FullName, u.Email, u.Role })
                 .ToListAsync();
             return Ok(users);
         }

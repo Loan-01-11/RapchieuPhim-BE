@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using RapchieuPhim.API.Services;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -73,6 +74,12 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddDbContext<RapchieuPhim.API.Models.CinemaManagementContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Memory Cache – lưu OTP quên mật khẩu
+builder.Services.AddMemoryCache();
+
+// Email Service
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 var app = builder.Build();
 
