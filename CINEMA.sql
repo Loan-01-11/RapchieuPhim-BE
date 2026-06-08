@@ -23,11 +23,10 @@ GO
 -- 1. ROLES  (UC-16 Management account - role-based access)
 --   Values: Customer | Staff | Admin
 -- ============================================================
-CREATE TABLE ROLES (
-    Role     INT          NOT NULL IDENTITY(1,1),
-    RoleName NVARCHAR(50) NOT NULL,
-    CONSTRAINT PK_ROLES      PRIMARY KEY (Role),
-    CONSTRAINT UQ_ROLES_NAME UNIQUE (RoleName)
+CREATE TABLE dbo.ROLES
+(
+    Role NVARCHAR(50) NOT NULL PRIMARY KEY,
+    Description NVARCHAR(255) NULL
 );
 GO
 
@@ -56,14 +55,16 @@ CREATE TABLE USERS (
     Gender          NVARCHAR(10)  NULL,
     Address         NVARCHAR(255) NULL,
     RewardPoint     INT           NOT NULL DEFAULT 0,
-    MembershipLevel NVARCHAR(50)  NULL,   -- Bronze | Silver | Gold | Platinum
+    MembershipLevel NVARCHAR(50)  NULL,
     Role            NVARCHAR(50)  NOT NULL,
     IsActive        BIT           NOT NULL DEFAULT 1,
     CreatedAt       DATETIME      NOT NULL DEFAULT GETDATE(),
-    CONSTRAINT PK_USERS       PRIMARY KEY (UserId),
+
+    CONSTRAINT PK_USERS PRIMARY KEY (UserId),
     CONSTRAINT UQ_USERS_EMAIL UNIQUE (Email),
-    CONSTRAINT FK_USERS_ROLE  FOREIGN KEY (Role)
-        REFERENCES ROLES (Role)
+
+    CONSTRAINT FK_USERS_ROLE FOREIGN KEY (Role)
+        REFERENCES ROLES(Role)
         ON UPDATE CASCADE
         ON DELETE NO ACTION
 );
