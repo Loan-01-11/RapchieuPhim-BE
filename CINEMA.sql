@@ -29,6 +29,12 @@ CREATE TABLE dbo.ROLES
     Description NVARCHAR(255) NULL
 );
 GO
+INSERT INTO dbo.ROLES(Role, Description)
+VALUES
+(N'Admin',    N'Quản trị hệ thống'),
+(N'Staff',    N'Nhân viên rạp chiếu phim'),
+(N'Customer', N'Khách hàng');
+GO
 
 -- ============================================================
 -- 2. AREAS  (UC-03 Select area - filter cinemas by city/region)
