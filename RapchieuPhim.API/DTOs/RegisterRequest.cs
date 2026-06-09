@@ -37,6 +37,6 @@ namespace RapchieuPhim.API.DTOs.Auth
         /// Cho phép: Admin, Staff, Customer.
         /// Nếu không gửi thì mặc định là Customer.
         /// </summary>
-        public string? RoleName { get; set; } = "Customer";
+        public string? RoleName { get; set; } = RoleConstants.Customer;
     }
 }
