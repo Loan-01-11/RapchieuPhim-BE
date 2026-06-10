@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
+using RapchieuPhim.API.Constants;
 using RapchieuPhim.API.DTOs.Auth;
 using RapchieuPhim.API.Models;
 using RapchieuPhim.API.Services;
@@ -47,12 +48,12 @@ namespace RapchieuPhim.API.Controllers
                 .FirstOrDefaultAsync(u => u.Email == email);
 
             if (user == null || !user.IsActive)
-                return Unauthorized(new { Message = "Email hoặc mật khẩu không chính xác." });
+                return Unauthorized(new { Message = ValidationMessages.InvalidCredentials });
 
             // User đăng ký qua Google sẽ không đăng nhập được bằng password
             if (string.IsNullOrEmpty(user.PasswordHash) ||
                 !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-                return Unauthorized(new { Message = "Email hoặc mật khẩu không chính xác." });
+                return Unauthorized(new { Message = ValidationMessages.InvalidCredentials });
 
             return Ok(BuildAuthResponse(user));
         }
@@ -67,17 +68,17 @@ namespace RapchieuPhim.API.Controllers
                 return BadRequest(new { Message = GetFirstError(), Errors = ModelState });
 
             if (request.Password != request.ConfirmPassword)
-                return BadRequest(new { Message = "Mật khẩu xác nhận không khớp." });
+                return BadRequest(new { Message = ValidationMessages.ConfirmPasswordMismatch });
 
             if (!DateOnly.TryParseExact(request.DateOfBirth, "yyyy-MM-dd",
                     CultureInfo.InvariantCulture, DateTimeStyles.None, out var dob))
-                return BadRequest(new { Message = "Ngày sinh không đúng định dạng. Vui lòng dùng định dạng yyyy-MM-dd (ví dụ: 2000-01-15)." });
+                return BadRequest(new { Message = ValidationMessages.DateOfBirthInvalidFormat });
 
             var email = request.Email.Trim();
             var phone = request.Phone.Trim();
 
             if (await _context.Users.AnyAsync(u => u.Email == email))
-                return Conflict(new { Message = "Email này đã được đăng ký. Vui lòng sử dụng email khác hoặc đăng nhập." });
+                return Conflict(new { Message = ValidationMessages.EmailAlreadyRegistered });
 
             var roleName = string.IsNullOrWhiteSpace(request.RoleName)
                 ? "Customer"
@@ -86,7 +87,7 @@ namespace RapchieuPhim.API.Controllers
             var allowedRoles = new[] { "Admin", "Staff", "Customer" };
 
             if (!allowedRoles.Contains(roleName))
-                return BadRequest(new { Message = "Role chỉ được là Admin, Staff hoặc Customer." });
+                return BadRequest(new { Message = ValidationMessages.InvalidRole });
 
             var user = new User
             {
@@ -121,7 +122,7 @@ namespace RapchieuPhim.API.Controllers
 
             var payload = await VerifyGoogleToken(request.IdToken);
             if (payload == null)
-                return Unauthorized(new { Message = "Google token không hợp lệ hoặc đã hết hạn." });
+                return Unauthorized(new { Message = ValidationMessages.GoogleTokenInvalid });
 
             var email = payload.Email.Trim();
 
@@ -137,12 +138,12 @@ namespace RapchieuPhim.API.Controllers
                     Email               = payload.Email,
                     FullName            = payload.Name ?? "",
                     AvatarUrl           = payload.Picture,
-                    Message             = "Tài khoản chưa đăng ký. Vui lòng bổ sung thông tin để hoàn tất."
+                    Message             = ValidationMessages.GoogleAccountNotRegistered
                 });
             }
 
             if (!user.IsActive)
-                return Unauthorized(new { Message = "Tài khoản của bạn đã bị khoá. Vui lòng liên hệ hỗ trợ." });
+                return Unauthorized(new { Message = ValidationMessages.UserLocked });
 
             // Cập nhật avatar nếu thay đổi
             if (!string.IsNullOrEmpty(payload.Picture) && user.AvatarUrl != payload.Picture)
@@ -167,12 +168,12 @@ namespace RapchieuPhim.API.Controllers
             // Xác thực lại Google token
             var payload = await VerifyGoogleToken(request.IdToken);
             if (payload == null)
-                return Unauthorized(new { Message = "Google token không hợp lệ hoặc đã hết hạn." });
+                return Unauthorized(new { Message = ValidationMessages.GoogleTokenInvalid });
 
             // Parse DateOfBirth
             if (!DateOnly.TryParseExact(request.DateOfBirth, "yyyy-MM-dd",
                     CultureInfo.InvariantCulture, DateTimeStyles.None, out var dob))
-                return BadRequest(new { Message = "Ngày sinh không đúng định dạng. Vui lòng dùng định dạng yyyy-MM-dd." });
+                return BadRequest(new { Message = ValidationMessages.DateOfBirthInvalidFormat });
 
             var email = payload.Email.Trim();
             var phone = request.Phone.Trim();
@@ -184,7 +185,7 @@ namespace RapchieuPhim.API.Controllers
             if (existingUser != null)
             {
                 if (!existingUser.IsActive)
-                    return Unauthorized(new { Message = "Tài khoản đã bị khoá. Vui lòng liên hệ hỗ trợ." });
+                    return Unauthorized(new { Message = ValidationMessages.UserLocked });
 
                 return Ok(BuildAuthResponse(existingUser));
             }
@@ -231,9 +232,9 @@ namespace RapchieuPhim.API.Controllers
 
             // Bảo mật: luôn trả OK dù email không tồn tại (tránh lộ thông tin)
             if (user == null || !user.IsActive)
-                return Ok(new { Message = "Nếu email tồn tại, mã xác nhận đã được gửi. Vui lòng kiểm tra hộp thư." });
+                return Ok(new { Message = ValidationMessages.IfEmailExistsOtpSent });
 
-            // Sinh OTP 6 chữ số ngỪu nhiên
+            // Sinh OTP 6 chữ số ngẫu nhiên
             var otp = Random.Shared.Next(100000, 999999).ToString();
 
             // Lưu OTP vào cache với key = "otp_{email}", hết hạn sau 5 phút
@@ -243,7 +244,7 @@ namespace RapchieuPhim.API.Controllers
             // Gửi email chứa OTP
             await _emailService.SendOtpAsync(email, user.FullName, otp);
 
-            return Ok(new { Message = "Mã xác nhận đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư (cả mục Spam)." });
+            return Ok(new { Message = ValidationMessages.OtpSentSuccess });
         }
 
         // ── 6. ĐẶT LẠI MẬT KHẨU ─────────────────────────────────────────
@@ -256,21 +257,21 @@ namespace RapchieuPhim.API.Controllers
                 return BadRequest(new { Message = GetFirstError(), Errors = ModelState });
 
             if (request.NewPassword != request.ConfirmPassword)
-                return BadRequest(new { Message = "Mật khẩu xác nhận không khớp." });
+                return BadRequest(new { Message = ValidationMessages.ConfirmPasswordMismatch });
 
             var email    = request.Email.Trim();
             var cacheKey = $"otp_{email.ToLower()}";
 
             // Kiểm tra OTP trong cache
             if (!_cache.TryGetValue(cacheKey, out string? savedOtp) || savedOtp != request.OtpCode)
-                return BadRequest(new { Message = "Mã xác nhận không đúng hoặc đã hết hạn. Vui lòng yêu cầu mã mới." });
+                return BadRequest(new { Message = ValidationMessages.OtpInvalidOrExpired });
 
             // Tìm user
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.Email == email && u.IsActive);
 
             if (user == null)
-                return NotFound(new { Message = "Không tìm thấy tài khoản." });
+                return NotFound(new { Message = ValidationMessages.UserNotFound });
 
             // Cập nhật mật khẩu
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
@@ -279,7 +280,26 @@ namespace RapchieuPhim.API.Controllers
             // Xóa OTP khỏi cache sau khi dùng xong
             _cache.Remove(cacheKey);
 
-            return Ok(new { Message = "Đổi mật khẩu thành công! Vui lòng đăng nhập lại." });
+            return Ok(new { Message = ValidationMessages.ResetPasswordSuccess });
+        }
+
+        // MỚI: Xác minh mã OTP trước khi hiển thị giao diện thay đổi mật khẩu
+        // POST: api/Auth/VerifyResetCode
+        // Nội dung: { "email": "...", "otpCode": "123456" }
+        [HttpPost("VerifyResetCode")]
+        public async Task<IActionResult> VerifyResetCode([FromBody] VerifyResetCodeRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new { Message = GetFirstError(), Errors = ModelState });
+
+            var email = request.Email.Trim();
+            var cacheKey = $"otp_{email.ToLower()}";
+
+            if (!_cache.TryGetValue(cacheKey, out string? savedOtp) || savedOtp != request.OtpCode)
+                return BadRequest(new { Message = ValidationMessages.OtpInvalidOrExpired });
+
+            // Mã OTP hợp lệ — giao diện người dùng có thể hiển thị giao diện thay đổi mật khẩu.
+            return Ok(new { Message = ValidationMessages.OtpValid });
         }
 
         // ── Private helpers ──────────────────────────────────────────────────
@@ -358,7 +378,7 @@ namespace RapchieuPhim.API.Controllers
                 foreach (var error in state.Errors)
                     if (!string.IsNullOrEmpty(error.ErrorMessage))
                         return error.ErrorMessage;
-            return "Dữ liệu không hợp lệ.";
+            return ValidationMessages.DataInvalid;
         }
     }
 }
