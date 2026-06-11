@@ -2,6 +2,7 @@
 {
     public static class ValidationMessages
     {
+        // Field / attribute messages
         public const string EmailRequired = "Email không được để trống.";
         public const string EmailInvalid = "Email không đúng định dạng.";
         public const string PasswordRequired = "Mật khẩu không được để trống.";
@@ -16,13 +17,13 @@
         public const string OtpLength = "Mã xác nhận gồm 6 chữ số.";
         public const string NewPasswordRequired = "Mật khẩu mới không được để trống.";
 
-        // OTP flow
+        // OTP / forgot-reset flow
         public const string OtpInvalidOrExpired = "Mã xác nhận không đúng hoặc đã hết hạn. Vui lòng yêu cầu mã mới.";
         public const string OtpValid = "Mã xác nhận hợp lệ.";
         public const string OtpSentSuccess = "Mã xác nhận đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư (cả mục Spam).";
-        public const string IfEmailExistsOtpSent = "Nếu email tồn tại, mã xác nhận đã được gửi. Vui lòng kiểm tra hộp thư.";
+        public const string IfEmailExistsOtpSent = "Nếu email tồn tại, mã xác nhận đã được gửi. Vui lòng kiểm tra hộp thư.";    
 
-        // Auth / account messages
+        // Auth / account errors
         public const string InvalidCredentials = "Email hoặc mật khẩu không chính xác.";
         public const string ConfirmPasswordMismatch = "Mật khẩu xác nhận không khớp.";
         public const string DateOfBirthInvalidFormat = "Ngày sinh không đúng định dạng. Vui lòng dùng định dạng yyyy-MM-dd (ví dụ: 2000-01-15).";
@@ -35,7 +36,9 @@
         public const string ResetPasswordSuccess = "Đổi mật khẩu thành công! Vui lòng đăng nhập lại.";
         public const string GoogleTokenInvalid = "Google token không hợp lệ hoặc đã hết hạn.";
 
-        // General
+        // Misc / internal
         public const string DataInvalid = "Dữ liệu không hợp lệ.";
+        public const string OnlyCustomerRegistrationAllowed = "Chỉ cho phép đăng ký tài khoản Customer qua endpoint này.";
+        public const string InvalidInternalRole = "Quyền tài khoản không hợp lệ. Chỉ được phép chọn quyền 'Admin' hoặc 'Staff'.";
     }
 }

@@ -1,5 +1,6 @@
 using Google.Apis.Auth;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
@@ -43,7 +44,7 @@ namespace RapchieuPhim.API.Controllers
 
             var email = request.Email.Trim();
 
-            // Tìm user theo email (collation CI_AS nên không cần ToLower)
+            // Tìm user theo email 
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.Email == email);
 
@@ -58,7 +59,7 @@ namespace RapchieuPhim.API.Controllers
             return Ok(BuildAuthResponse(user));
         }
 
-        // ── 2. ĐĂNG KÝ BẰNG TÀI KHOẢN ──────────────────────────────────────
+        // ── 2. ĐĂNG KÝ BẰNG TÀI KHOẢN (ONLY CUSTOMER CAN REGISTER) ───────
         // POST: api/Auth/Register
         // Body: { "fullName", "email", "password", "confirmPassword", "dateOfBirth": "yyyy-MM-dd", "gender", "phone" }
         [HttpPost("Register")]
@@ -80,14 +81,12 @@ namespace RapchieuPhim.API.Controllers
             if (await _context.Users.AnyAsync(u => u.Email == email))
                 return Conflict(new { Message = ValidationMessages.EmailAlreadyRegistered });
 
-            var roleName = string.IsNullOrWhiteSpace(request.RoleName)
-                ? "Customer"
-                : request.RoleName.Trim();
-
-            var allowedRoles = new[] { "Admin", "Staff", "Customer" };
-
-            if (!allowedRoles.Contains(roleName))
-                return BadRequest(new { Message = ValidationMessages.InvalidRole });
+            // Enforce that only Customer can be registered via public endpoint.
+            if (!string.IsNullOrWhiteSpace(request.RoleName) &&
+                !string.Equals(request.RoleName.Trim(), "Customer", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { Message = "Only Customer registration is allowed via this endpoint." });
+            }
 
             var user = new User
             {
@@ -97,7 +96,7 @@ namespace RapchieuPhim.API.Controllers
                 Phone = phone,
                 Gender = string.IsNullOrWhiteSpace(request.Gender) ? null : request.Gender.Trim(),
                 DateOfBirth = dob,
-                Role = roleName,
+                Role = "Customer",
                 RewardPoint = 0,
                 IsActive = true,
                 CreatedAt = DateTime.Now
@@ -107,6 +106,69 @@ namespace RapchieuPhim.API.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(BuildAuthResponse(user));
+        }
+
+        // ── 2b. CREATE INTERNAL ACCOUNT (ADMIN ONLY) ───────────────────
+        // POST: api/Auth/CreateInternalAccount
+        // Body: { "fullName", "email", "password", "confirmPassword", "dateOfBirth", "gender", "phone", "roleName" }
+        [HttpPost("CreateInternalAccount")]
+        [Authorize(Roles = "Admin")] // 🔐 Chỉ Admin tối cao mới có quyền gọi API này
+        public async Task<IActionResult> CreateInternalAccount([FromBody] RegisterRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new { Message = GetFirstError(), Errors = ModelState });
+
+            if (request.Password != request.ConfirmPassword)
+                return BadRequest(new { Message = ValidationMessages.ConfirmPasswordMismatch });
+
+            if (!DateOnly.TryParseExact(request.DateOfBirth, "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture, DateTimeStyles.None, out var dob))
+                return BadRequest(new { Message = ValidationMessages.DateOfBirthInvalidFormat });
+
+            // 🌟 1. BẢO MẬT: Kiểm tra nhóm quyền truyền lên từ Swagger/Frontend
+            var roleName = string.IsNullOrWhiteSpace(request.RoleName) ? "" : request.RoleName.Trim();
+            var allowedRoles = new[] { "Admin", "Staff" }; // Chỉ cho phép tạo 2 quyền nội bộ này
+
+            if (!allowedRoles.Contains(roleName))
+            {
+                return BadRequest(new { Message = ValidationMessages.InvalidInternalRole });
+            }
+
+            var email = request.Email.Trim();
+            var phone = request.Phone.Trim();
+
+            if (await _context.Users.AnyAsync(u => u.Email == email))
+                return Conflict(new { Message = ValidationMessages.EmailAlreadyRegistered });
+
+            // 🌟 2. GÁN QUYỀN ĐỘNG: Tạo đối tượng User với quyền tương ứng
+            var user = new User
+            {
+                FullName = request.FullName.Trim(),
+                Email = email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                Phone = phone,
+                Gender = string.IsNullOrWhiteSpace(request.Gender) ? null : request.Gender.Trim(),
+                DateOfBirth = dob,
+
+                // Gán động theo biến roleName đã được kiểm duyệt ở trên
+                Role = roleName,
+
+                // 💡 MẸO NHỎ: Nếu Database nhánh này của bạn bắt cột Role là kiểu số (int ID), hãy dùng dòng dưới này:
+                // Role = (roleName == "Admin") ? 1 : 2, 
+
+                RewardPoint = 0,
+                IsActive = true,
+                CreatedAt = DateTime.Now
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                Message = $"{roleName} account created successfully.",
+                User = new { user.UserId, user.FullName, user.Email, user.Role }
+            });
         }
 
         // ── 3. ĐĂNG NHẬP BẰNG GOOGLE ────────────────────────────────────────

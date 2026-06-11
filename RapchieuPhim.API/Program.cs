@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using RapchieuPhim.API.Models;
 using RapchieuPhim.API.Services;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -98,5 +99,48 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// ────────── KHỞI TẠO TÀI KHOẢN ADMIN MẶC ĐỊNH ──────────
+using (var scope = app.Services.CreateScope()) // 1. Mở một không gian cô lập (Scope)
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        // 2. Gọi tầng kết nối Database (DbContext) ra để dùng
+        var context = services.GetRequiredService<RapchieuPhim.API.Models.CinemaManagementContext>();
+
+        // 3. Quét database xem có ông nào đang giữ quyền "Admin" chưa
+        var hasAdmin = await context.Users.AnyAsync(u => u.Role == "Admin");
+
+        // 4. Nếu CHƯA CÓ tài khoản Admin nào, tiến hành tạo mới
+        if (!hasAdmin)
+        {
+            var defaultAdmin = new User
+            {
+                FullName = "Hệ Thống Admin",
+                Email = "admin@123.com", // 📧 Dùng tài khoản này đăng nhập
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"), // 🔑 Mật khẩu đã băm bảo mật
+                Phone = "0123456789",
+                DateOfBirth = new DateOnly(2000, 1, 1),
+                Role = "Admin", // Chuỗi chữ gán quyền
+                RewardPoint = 0,
+                IsActive = true,
+                CreatedAt = DateTime.Now
+            };
+
+            context.Users.Add(defaultAdmin); // Thêm vào giỏ
+            await context.SaveChangesAsync(); // Chốt lưu xuống SQL Server
+
+            // In một dòng chữ màu xanh ra màn hình đen (Console) để báo hiệu cho bạn biết
+            Console.WriteLine("➔ [SEED DATA]: Khởi tạo thành công tài khoản Admin mặc định!");
+        }
+    }
+    catch (Exception ex)
+    {
+        // Nếu database chưa được tạo hoặc bị lỗi kết nối, hệ thống sẽ ghi log lại chứ không làm sập App
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Lỗi cắm mồi dữ liệu Admin.");
+    }
+}
 
 app.Run();
