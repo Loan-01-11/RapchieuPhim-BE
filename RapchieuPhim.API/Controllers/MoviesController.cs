@@ -55,6 +55,51 @@ namespace RapchieuPhim.API.Controllers
             return Ok(movies);
         }
 
+        // 🔓 3b. LẤY DANH SÁCH PHIM ĐANG CHIẾU (MỌI ĐỐI TƯỢNG)
+        // GET: api/Movies/NowShowing
+        [HttpGet("NowShowing")]
+        [AllowAnonymous] // 🌍 Ai vào web cũng xem được
+        public async Task<IActionResult> GetNowShowing()
+        {
+            // Lấy ngày hiện tại ở định dạng DateOnly để so sánh với DB
+            var today = DateOnly.FromDateTime(DateTime.Now);
+
+            var movies = await _context.Movies
+                .Where(m => m.Status == "suất đang chiếu" && m.ReleaseDate <= today && m.EndDate >= today)
+                .ToListAsync();
+
+            return Ok(movies);
+        }
+
+        // 🔓 3c. LẤY DANH SÁCH PHIM SẮP CHIẾU (MỌI ĐỐI TƯỢNG)
+        // GET: api/Movies/ComingSoon
+        [HttpGet("ComingSoon")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetComingSoon()
+        {
+            var today = DateOnly.FromDateTime(DateTime.Now);
+
+            var movies = await _context.Movies
+                .Where(m => m.Status == "suất sắp chiếu")
+                .ToListAsync();
+
+            return Ok(movies);
+        }
+
+        // 🔓 3d. LẤY DANH SÁCH PHIM CÓ SUẤT CHIẾU ĐẶC BIỆT / CHIẾU SỚM (MỌI ĐỐI TƯỢNG)
+        // GET: api/Movies/Special
+        [HttpGet("Special")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetSpecialRequests()
+        {
+            // Lọc theo trạng thái đặc biệt bạn quy định trong DB (Ví dụ: "Special")
+            var movies = await _context.Movies
+                .Where(m => m.Status == "suất đặc biệt")
+                .ToListAsync();
+
+            return Ok(movies);
+        }
+
         // 👑 4. THÊM PHIM MỚI (CHỈ ADMIN)
         // POST: api/Movies
         [HttpPost]
