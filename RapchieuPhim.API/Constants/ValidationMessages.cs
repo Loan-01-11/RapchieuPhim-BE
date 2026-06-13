@@ -13,9 +13,15 @@
         public const string OtpRequired = "Mã xác nhận không được để trống.";
         public const string NewPasswordRequired = "Mật khẩu mới không được để trống.";
         public const string GoogleIdTokenRequired = "Google ID token không được để trống.";
-
         public const string PasswordMinLength = "Mật khẩu phải có ít nhất 6 ký tự.";
         public const string OtpLength = "Mã xác nhận gồm 6 chữ số.";
+
+        //  Ràng buộc dành riêng cho phân hệ quản lý Phim (Movies)
+        public const string MovieTitleRequired = "Tiêu đề phim không được để trống.";
+        public const string MovieDurationRequired = "Thời lượng phim không được để trống.";
+        public const string MovieReleaseDateRequired = "Ngày khởi chiếu không được để trống.";
+        public const string MovieEndDateRequired = "Ngày kết thúc không được để trống.";
+        public const string MovieStatusRequired = "Trạng thái phim không được để trống.";
 
         #endregion
 
@@ -42,6 +48,7 @@
         public static string UserNotFoundWithId(int id) => $"Không tìm thấy người dùng có ID: {id}.";
         public static string UserUpdateSuccessWithId(int id) => $"Đã cập nhật thành công tài khoản ID {id}.";
 
+        public static string MovieNotFoundWithId(int id) => $"Không tìm thấy bộ phim có ID: {id}.";
         #endregion
 
         #region 4. CHU KỲ MÃ OTP & KHÔI PHỤC MẬT KHẨU (OTP & Forgot-Reset Flow)
