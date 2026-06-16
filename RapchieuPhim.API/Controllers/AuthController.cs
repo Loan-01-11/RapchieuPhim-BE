@@ -366,9 +366,19 @@ namespace RapchieuPhim.API.Controllers
 
         // ── Private helpers ──────────────────────────────────────────────────
 
-        /// <summary>Xác thực Google ID token, trả null nếu lỗi.</summary>
         private async Task<GoogleJsonWebSignature.Payload?> VerifyGoogleToken(string idToken)
         {
+            // CỔNG PHỤ: Nếu token là "mock-google-test", trả về thông tin giả lập ngay để test trên Swagger
+            if (idToken == "mock-google-test")
+            {
+                return new GoogleJsonWebSignature.Payload
+                {
+                    Email = "mockuser@gmail.com",
+                    Name = "User Test Google",
+                    Picture = "https://lh3.googleusercontent.com/a/default-user"
+                };
+            }
+
             try
             {
                 var settings = new GoogleJsonWebSignature.ValidationSettings
@@ -377,8 +387,13 @@ namespace RapchieuPhim.API.Controllers
                 };
                 return await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"[Google Auth Error]: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"[Inner Exception]: {ex.InnerException.Message}");
+                }
                 return null;
             }
         }

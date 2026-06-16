@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using RapchieuPhim.API.Constants;
 
 namespace RapchieuPhim.API.DTOs.Auth
@@ -7,6 +8,7 @@ namespace RapchieuPhim.API.DTOs.Auth
     public class GoogleRegisterCompleteRequest
     {
         [Required(ErrorMessage = ValidationMessages.GoogleIdTokenRequired)]
+        [DefaultValue("mock-google-test")]
         public string IdToken { get; set; } = null!;
 
         [Required(ErrorMessage = ValidationMessages.FullNameRequired)]

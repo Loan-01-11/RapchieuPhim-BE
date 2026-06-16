@@ -51,7 +51,7 @@ builder.Services.AddSwaggerGen(c =>
         Description = "RESTful API for Cinema Management System"
     });
 
-    // Allow entering Bearer token in Swagger UI
+    // ── 1. Xác thực bằng JWT Bearer (cho các API cần đăng nhập) ──────────
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name         = "Authorization",
@@ -71,6 +71,26 @@ builder.Services.AddSwaggerGen(c =>
             Array.Empty<string>()
         }
     });
+
+    // ── 2. Đăng nhập Google OAuth2 ngay trên Swagger UI ─────────────────
+    c.AddSecurityDefinition("Google", new OpenApiSecurityScheme
+    {
+        Name  = "Google OAuth2",
+        Type  = SecuritySchemeType.OAuth2,
+        Flows = new OpenApiOAuthFlows
+        {
+            Implicit = new OpenApiOAuthFlow
+            {
+                AuthorizationUrl = new Uri("https://accounts.google.com/o/oauth2/v2/auth"),
+                Scopes = new Dictionary<string, string>
+                {
+                    { "openid",  "Xác thực danh tính" },
+                    { "email",   "Đọc địa chỉ email" },
+                    { "profile", "Đọc thông tin hồ sơ" }
+                }
+            }
+        }
+    });
 });
 
 builder.Services.AddDbContext<RapchieuPhim.API.Models.CinemaManagementContext>(options =>
@@ -88,7 +108,16 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Cinema Management API v1"));
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Cinema Management API v1");
+
+        // Cấu hình OAuth2 Google: điền sẵn Client ID để Swagger biết dùng project nào
+        c.OAuthClientId(builder.Configuration["Google:ClientId"]);
+        c.OAuthClientSecret(builder.Configuration["Google:ClientSecret"]);
+        c.OAuthScopes("openid", "email", "profile");
+        c.OAuthUsePkce(); // Bảo mật thêm bằng PKCE
+    });
 }
 
 app.UseHttpsRedirection();
