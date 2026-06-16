@@ -108,11 +108,12 @@ namespace RapchieuPhim.API.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
+
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
             if (string.IsNullOrEmpty(userIdClaim))
                 return Unauthorized(new { Message = ValidationMessages.TokenInvalid });
 
-            int currentUserId = int.Parse(userIdClaim); // Chuyển thành số int chuẩn chỉnh
+            int currentUserId = int.Parse(userIdClaim);
 
             var movie = new Movie
             {
@@ -133,8 +134,24 @@ namespace RapchieuPhim.API.Controllers
                 Status = request.Status.Trim(),
 
                 CreatedAt = DateTime.Now,
-                CreatedBy = currentUserId // 🌟 Gán số int vào ô int, không còn bị lỗi ép kiểu chuỗi nữa
+                CreatedBy = currentUserId
+                // 🌟 ĐÃ XÓA dòng khởi tạo danh sách lỗi cũ vì file Movie.cs của bạn đã tự tạo sẵn 'Categories' rồi!
             };
+
+            // 🌟 VÒNG LẶP THÊM THỂ LOẠI THEO ĐÚNG CẤU TRÚC 'Categories' CỦA BẠN:
+            if (request.CategoryIds != null)
+            {
+                foreach (var catId in request.CategoryIds)
+                {
+                    // Vì EF Core giấu bảng trung gian, ta tìm thực thể thể loại hiện có trong DB
+                    var category = await _context.Moviecategories.FindAsync(catId);
+                    if (category != null)
+                    {
+                        // Ném thẳng thực thể thể loại vào danh sách 'Categories' của phim
+                        movie.Categories.Add(category);
+                    }
+                }
+            }
 
             _context.Movies.Add(movie);
             await _context.SaveChangesAsync();

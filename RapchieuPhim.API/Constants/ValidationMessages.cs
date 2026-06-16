@@ -15,6 +15,7 @@
         public const string GoogleIdTokenRequired = "Google ID token không được để trống.";
         public const string PasswordMinLength = "Mật khẩu phải có ít nhất 6 ký tự.";
         public const string OtpLength = "Mã xác nhận gồm 6 chữ số.";
+        public const string IdMismatch = "Mã số (ID) không khớp với hệ thống.";
 
         //  Ràng buộc dành riêng cho phân hệ quản lý Phim (Movies)
         public const string MovieTitleRequired = "Tiêu đề phim không được để trống.";
@@ -22,6 +23,9 @@
         public const string MovieReleaseDateRequired = "Ngày khởi chiếu không được để trống.";
         public const string MovieEndDateRequired = "Ngày kết thúc không được để trống.";
         public const string MovieStatusRequired = "Trạng thái phim không được để trống.";
+        public const string CategoryNotFound = "Thể loại phim không tồn tại hoặc đã bị xóa.";
+        public const string CategoryNameRequired = "Tên thể loại không được để trống.";
+        public const string CategoryUpdateSuccess = "Cập nhật thể loại phim thành công!";
 
         #endregion
 
