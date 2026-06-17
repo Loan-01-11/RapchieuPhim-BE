@@ -79,6 +79,8 @@ builder.Services.AddDbContext<RapchieuPhim.API.Models.CinemaManagementContext>(o
 // Memory Cache – lưu OTP quên mật khẩu
 builder.Services.AddMemoryCache();
 
+builder.Services.AddScoped<IUserService, UserService>();
+
 // Email Service
 builder.Services.AddScoped<IEmailService, EmailService>();
 
