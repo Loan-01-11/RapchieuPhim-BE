@@ -377,8 +377,13 @@ namespace RapchieuPhim.API.Controllers
                 };
                 return await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"[Google Auth Error]: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"[Inner Exception]: {ex.InnerException.Message}");
+                }
                 return null;
             }
         }
