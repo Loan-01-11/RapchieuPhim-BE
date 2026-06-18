@@ -102,6 +102,12 @@ builder.Services.AddScoped<ISeatService, SeatService>();
 // Showtime Service
 builder.Services.AddScoped<IShowtimeService, ShowtimeService>();
 
+//Area Service
+builder.Services.AddScoped<IAreaService, AreaService>();
+
+//Cinema Service
+builder.Services.AddScoped<ICinemaService, CinemaService>();
+
 
 var app = builder.Build();
 
