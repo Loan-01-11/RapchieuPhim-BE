@@ -1,79 +1,92 @@
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using RapchieuPhim.API.Models;
+using RapchieuPhim.API.Constants; // Sử dụng ValidationMessages hằng số sạch
+using RapchieuPhim.API.DTO.DTORequest;
+using RapchieuPhim.API.DTOs;      // Sử dụng AreaRequest và AreaResponse DTO
+using RapchieuPhim.API.Services;  // Sử dụng giao tiếp IAreaService
+using System.Security.Claims;
 
 namespace RapchieuPhim.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize] // 🔐 KHÓA TỔNG: Bắt buộc tất cả các hàm ở dưới phải có Token đăng nhập mới được gọi
     public class AreasController : ControllerBase
     {
-        private readonly CinemaManagementContext _context;
+        private readonly IAreaService _areaService;
 
-        public AreasController(CinemaManagementContext context)
+        // Tiêm (Inject) Service vào thông qua hàm khởi tạo Constructor
+        public System.Security.Claims.ClaimsPrincipal currentUser => User;
+
+        public AreasController(IAreaService areaService)
         {
-            _context = context;
+            _areaService = areaService;
         }
 
-        // GET: api/Areas
+        // GET: api/Areas (Tất cả thành viên đã đăng nhập đều có quyền xem)
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var areas = await _context.Areas.ToListAsync();
+            var areas = await _areaService.GetAllAsync();
             return Ok(areas);
         }
 
-        // GET: api/Areas/{id}
+        // GET: api/Areas/{id} (Tất cả thành viên đã đăng nhập đều có quyền xem chi tiết)
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var area = await _context.Areas.FindAsync(id);
+            var area = await _areaService.GetByIdAsync(id);
             if (area == null)
-                return NotFound(new { Message = $"Area with id {id} not found." });
+                return NotFound(new { Message = ValidationMessages.AreaNotFoundWithId(id) });
+
             return Ok(area);
         }
 
-        // POST: api/Areas
+        // POST: api/Areas 👑 (CHỈ ADMIN MỚI CÓ QUYỀN TẠO MỚI)
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Area area)
+        [Authorize(Roles = "Admin")] // Chốt chặn phân quyền theo vai trò (Role-Based Authorization)
+        public async Task<IActionResult> Create([FromBody] AreaRequest request)
         {
-            _context.Areas.Add(area);
-            await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetById), new { id = area.AreaId }, area);
+            var result = await _areaService.CreateAsync(request);
+
+            // Nếu Service báo thất bại (ví dụ: trùng tên khu vực)
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { Message = result.Message });
+
+            // Trả về mã thành công RESTful chuẩn 201 Created kèm dữ liệu sạch
+            return CreatedAtAction(nameof(GetById), new { id = result.Data!.AreaId }, result.Data);
         }
 
-        // PUT: api/Areas/{id}
+        // PUT: api/Areas/{id} 👑 (CHỈ ADMIN MỚI CÓ QUYỀN SỬA)
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] Area area)
+        [Authorize(Roles = "Admin")] // Chốt chặn phân quyền
+        public async Task<IActionResult> Update(int id, [FromBody] AreaRequest request)
         {
-            if (id != area.AreaId)
-                return BadRequest(new { Message = "Id mismatch." });
+            var result = await _areaService.UpdateAsync(id, request);
 
-            _context.Entry(area).State = EntityState.Modified;
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_context.Areas.Any(e => e.AreaId == id))
-                    return NotFound(new { Message = $"Area with id {id} not found." });
-                throw;
-            }
-            return NoContent();
+            // Nếu có lỗi (404 không thấy hoặc 400 dính tên trùng lặp với thằng khác)
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { Message = result.Message });
+
+            return Ok(new { Message = result.Message });
         }
 
-        // DELETE: api/Areas/{id}
+        // DELETE: api/Areas/{id} 👑 (CHỈ ADMIN TỐI CAO MỚI ĐƯỢC XÓA)
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")] // Admin thường lọt qua cửa này, nhưng sẽ bị khóa chặt ở Service dưới
         public async Task<IActionResult> Delete(int id)
         {
-            var area = await _context.Areas.FindAsync(id);
-            if (area == null)
-                return NotFound(new { Message = $"Area with id {id} not found." });
+            // 1. Bóc Token lấy Email của ông Admin đang ngồi click bấm nút xóa
+            var currentOperatorEmail = User.FindFirst(ClaimTypes.Email)?.Value;
 
-            _context.Areas.Remove(area);
-            await _context.SaveChangesAsync();
-            return NoContent();
+            // 2. Chuyển ID và Email xuống Service thẩm định quyền lực tối cao
+            var result = await _areaService.DeleteAsync(id, currentOperatorEmail ?? string.Empty);
+
+            // 3. Nếu không phải Super Admin (Email không khớp hằng số) ➔ Service trả lỗi 403 Forbidden
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { Message = result.Message });
+
+            return Ok(new { Message = result.Message });
         }
     }
 }

@@ -95,6 +95,21 @@
         // Tài khoản Admin tối cao tối thượng được quyền làm hết mọi thứ
         public const string SuperAdminEmail = "admin@123.com";
 
+        // 🌟 CÁC THÔNG BÁO DÀNH RIÊNG CHO PHÂN HỆ CINEMA (RẠP PHIM)
+        public static string CinemaNotFoundWithId(int id) => $"Không tìm thấy rạp chiếu phim có ID = {id}.";
+        public const string CinemaUpdateSuccess = "Cập nhật thông tin rạp phim thành công!";
+        public const string CinemaDeleteSuccess = "Xóa rạp chiếu phim thành công!";
+        public const string CinemaConcurrencyError = "Dữ liệu đã bị thay đổi bởi một luồng khác, vui lòng thử lại.";
+        public const string UnauthorizedCinemaUpdate = "Bạn không có quyền chỉnh sửa thông tin rạp chiếu phim này.";
+
+        // 🌟 CÁC THÔNG BÁO DÀNH RIÊNG CHO PHÂN HỆ AREAS (KHU VỰC)
+        public static string AreaNotFoundWithId(int id) => $"Không tìm thấy khu vực có ID = {id}.";
+        public const string AreaUpdateSuccess = "Cập nhật thông tin khu vực thành công!";
+        public const string AreaDeleteSuccess = "Xóa khu vực thành công!";
+        public const string AreaConcurrencyError = "Dữ liệu khu vực đã bị thay đổi bởi một luồng khác, vui lòng thử lại.";
+        public const string AreaNameAlreadyExists = "Tên khu vực này đã tồn tại trong hệ thống.";
+        public const string AreaNameRequired = "Tên khu vực không được để trống.";
+        public const string AreaNameMaxLength = "Tên khu vực không được vượt quá 100 ký tự.";
         #endregion
     }
-}
+} 
