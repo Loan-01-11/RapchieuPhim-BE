@@ -96,11 +96,11 @@ builder.Services.AddScoped<IMovieService, MovieService>();
 // Movie Category Service
 builder.Services.AddScoped<IMovieCategoryService, MovieCategoryService>();
 
-//Area Service
-builder.Services.AddScoped<IAreaService, AreaService>();
+// Seat Service
+builder.Services.AddScoped<ISeatService, SeatService>();
 
-//Cinema Service
-builder.Services.AddScoped<ICinemaService, CinemaService>();
+// Showtime Service
+builder.Services.AddScoped<IShowtimeService, ShowtimeService>();
 
 
 var app = builder.Build();
