@@ -160,7 +160,7 @@ CREATE TABLE MOVIES (
     EndDate     DATE          NULL,
     PosterUrl   NVARCHAR(500) NULL,
     TrailerUrl  NVARCHAR(500) NULL,
-    Status      NVARCHAR(20)  NOT NULL DEFAULT 'Active',  -- Active | Inactive | Coming Soon
+    Status      NVARCHAR(30)  NOT NULL DEFAULT N'suất đang chiếu',  -- suất đang chiếu | suất sắp chiếu | suất đặc biệt
     CreatedBy   INT           NOT NULL,
     CreatedAt   DATETIME      NOT NULL DEFAULT GETDATE(),
     CONSTRAINT PK_MOVIES      PRIMARY KEY (MovieId),
@@ -926,9 +926,7 @@ BEGIN
     FROM PAYMENTS
     WHERE StaffId = @StaffId
       AND CAST(CreatedAt AS DATE) = @ShiftDate
-      AND PaymentStatus = 'Success';
-
-    UPDATE STAFFSHIFTS
+     UPDATE STAFFSHIFTS
     SET ShiftEnd      = GETDATE(),
         TotalBookings = @TotalBookings,
         TotalOrders   = @TotalOrders,
@@ -952,10 +950,10 @@ GO
 -- CHECK CONSTRAINTS  (đảm bảo chỉ lưu giá trị hợp lệ vào DB)
 -- ============================================================
 
--- MOVIES.Status: Active | Coming Soon | Inactive
+-- MOVIES.Status: suất đang chiếu | suất sắp chiếu | suất đặc biệt
 ALTER TABLE MOVIES
     ADD CONSTRAINT CK_MOVIES_STATUS
-    CHECK (Status IN (N'Active', N'Coming Soon', N'Inactive'));
+    CHECK (Status IN (N'suất đang chiếu', N'suất sắp chiếu', N'suất đặc biệt'));
 GO
 
 -- SHOWTIMES.Status: Active | Cancelled | Completed
