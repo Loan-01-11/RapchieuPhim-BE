@@ -47,7 +47,7 @@ namespace RapchieuPhim.API.Services
         public async Task<List<Showtime>> GetByMovieAsync(int movieId)
         {
             return await _context.Showtimes
-                .Where(s => s.MovieId == movieId && s.Status == ShowtimeMessages.ValidStatuses[0]) // "Active"
+                .Where(s => s.MovieId == movieId && s.Status == "Active")
                 .OrderBy(s => s.StartTime)
                 .ToListAsync();
         }
@@ -75,8 +75,9 @@ namespace RapchieuPhim.API.Services
             if (movie == null)
                 return (false, ShowtimeMessages.MovieNotFound, 404, null);
 
-            // ── Chỉ từ chối nếu phim bị "Inactive" (ngừng hoạt động) ──────────────────────
-            if (movie.Status == ValidationMessages.MovieStatusInactive)
+            // Chỉ từ chối nếu phim đã kết thúc hoàn toàn
+            var deletedStatuses = new[] { "Deleted", "Archived" };
+            if (deletedStatuses.Contains(movie.Status))
                 return (false, ShowtimeMessages.MovieNotActive, 409, null);
 
             // ── Validate phòng tồn tại và đang hoạt động ─────────────────────────

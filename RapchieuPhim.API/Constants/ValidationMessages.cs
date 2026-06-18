@@ -27,14 +27,6 @@ namespace RapchieuPhim.API.Constants
         public const string CategoryNameRequired = "Tên thể loại không được để trống.";
         public const string CategoryUpdateSuccess = "Cập nhật thể loại phim thành công!";
 
-        // Trạng thái phim hợp lệ (khớp với CINEMA.sql DEFAULT 'Active')
-        public const string MovieStatusActive     = "Active";       // Đang chiếu (trong khoảng ReleaseDate – EndDate)
-        public const string MovieStatusComingSoon = "Coming Soon";  // Sắp chiếu
-        public const string MovieStatusInactive   = "Inactive";     // Ngừng chiếu
-        public static readonly string[] ValidMovieStatuses = { "Active", "Coming Soon", "Inactive" };
-        public static string InvalidMovieStatus(string s) => $"Trạng thái phim '{s}' không hợp lệ. Chỉ chấp nhận: Active, Coming Soon, Inactive.";
-
-
         #endregion
 
         #region 2. ĐỊNH DẠNG DỮ LIỆU (Format Validation)
