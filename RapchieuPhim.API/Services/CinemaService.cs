@@ -38,7 +38,8 @@ namespace RapchieuPhim.API.Services
                     CinemaName = c.CinemaName,
                     Address = c.Address,
                     AreaId = c.AreaId,
-                    IsActive = c.IsActive
+                    IsActive = c.IsActive,
+                    Phone = c.Phone
                 }).ToListAsync();
         }
 
@@ -52,7 +53,8 @@ namespace RapchieuPhim.API.Services
                     CinemaName = c.CinemaName,
                     Address = c.Address,
                     AreaId = c.AreaId,
-                    IsActive = c.IsActive
+                    IsActive = c.IsActive,
+                    Phone = c.Phone
                 }).FirstOrDefaultAsync();
         }
 
@@ -66,7 +68,8 @@ namespace RapchieuPhim.API.Services
                     CinemaName = c.CinemaName,
                     Address = c.Address,
                     AreaId = c.AreaId,
-                    IsActive = c.IsActive
+                    IsActive = c.IsActive,
+                    Phone = c.Phone
                 }).ToListAsync();
         }
 
@@ -75,9 +78,10 @@ namespace RapchieuPhim.API.Services
             var cinema = new Cinema
             {
                 CinemaName = request.CinemaName.Trim(),
-                Address = request.Address?.Trim(),
+                Address = request.Address!.Trim(),
                 AreaId = request.AreaId,
-                IsActive = request.IsActive
+                IsActive = request.IsActive,
+                Phone = request.Phone?.Trim()
             };
 
             _context.Cinemas.Add(cinema);
@@ -109,9 +113,10 @@ namespace RapchieuPhim.API.Services
 
             // 3. Nếu chuẩn là Super Admin gõ cửa, tiến hành gán dữ liệu mới
             cinema.CinemaName = request.CinemaName.Trim();
-            cinema.Address = request.Address?.Trim();
+            cinema.Address = request.Address!.Trim();
             cinema.AreaId = request.AreaId;
             cinema.IsActive = request.IsActive;
+            cinema.Phone = request.Phone?.Trim();
 
             try
             {

@@ -99,6 +99,12 @@ namespace RapchieuPhim.API.Constants
         public const string CinemaDeleteSuccess = "Xóa rạp chiếu phim thành công!";
         public const string CinemaConcurrencyError = "Dữ liệu đã bị thay đổi bởi một luồng khác, vui lòng thử lại.";
         public const string UnauthorizedCinemaUpdate = "Bạn không có quyền chỉnh sửa thông tin rạp chiếu phim này.";
+        public const string CinemaPhoneMaxLength = "Số điện thoại rạp phim không được vượt quá 20 ký tự.";
+        public const string CinemaNameRequired = "Tên rạp chiếu phim không được để trống.";
+        public const string CinemaNameMaxLength = "Tên rạp chiếu phim không được vượt quá 150 ký tự.";
+        public const string CinemaAddressRequired = "Địa chỉ rạp chiếu phim không được để trống.";
+        public const string CinemaAddressMaxLength = "Địa chỉ rạp chiếu phim không được vượt quá 255 ký tự.";
+        public const string CinemaAreaRequired = "Vui lòng chọn khu vực hợp lệ cho rạp chiếu phim.";
 
         // --- CÁC HÀM TRẢ VỀ THÔNG BÁO CHỨA ID BIẾN ĐỘNG ---
         public static string CinemaNotFoundWithId(int id) => $"Không tìm thấy rạp chiếu phim có ID = {id}.";
