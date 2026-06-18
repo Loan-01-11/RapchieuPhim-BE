@@ -1,10 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using RapchieuPhim.API.Constants; // 🌟 Gọi thư mục hằng số ra dùng
+using RapchieuPhim.API.Constants;
 using RapchieuPhim.API.DTOs;
-using RapchieuPhim.API.Models;
-using System.Globalization;
+using RapchieuPhim.API.Services;
 using System.Security.Claims;
 
 namespace RapchieuPhim.API.Controllers
@@ -14,11 +12,11 @@ namespace RapchieuPhim.API.Controllers
     [Authorize]
     public class UsersController : ControllerBase
     {
-        private readonly CinemaManagementContext _context;
+        private readonly IUserService _userService;
 
-        public UsersController(CinemaManagementContext context)
+        public UsersController(IUserService userService)
         {
-            _context = context;
+            _userService = userService;
         }
 
         // 👑 1. LẤY TẤT CẢ USER (CHỈ ADMIN)
@@ -26,9 +24,7 @@ namespace RapchieuPhim.API.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAll()
         {
-            var users = await _context.Users
-                .Select(u => new { u.UserId, u.FullName, u.Email, u.Phone, u.Role, u.IsActive, u.CreatedAt, u.DateOfBirth, u.Gender })
-                .ToListAsync();
+            var users = await _userService.GetAllAsync();
             return Ok(users);
         }
 
@@ -37,13 +33,10 @@ namespace RapchieuPhim.API.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetById(int id)
         {
-            var user = await _context.Users
-                .Where(u => u.UserId == id)
-                .Select(u => new { u.UserId, u.FullName, u.Email, u.Phone, u.Role, u.IsActive })
-                .FirstOrDefaultAsync();
-
+            var user = await _userService.GetByIdAsync(id);
             if (user == null)
                 return NotFound(new { Message = ValidationMessages.UserNotFoundWithId(id) });
+
             return Ok(user);
         }
 
@@ -53,16 +46,13 @@ namespace RapchieuPhim.API.Controllers
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
             if (string.IsNullOrEmpty(userIdClaim))
-                return Unauthorized(new { Message = ValidationMessages.TokenInvalidOrExpired }); // ➔ Sạch hằng số
+                return Unauthorized(new { Message = ValidationMessages.TokenInvalidOrExpired });
 
             int userId = int.Parse(userIdClaim);
-            var userProfile = await _context.Users
-                .Where(u => u.UserId == userId)
-                .Select(u => new { u.UserId, u.FullName, u.Email, u.Phone, u.DateOfBirth, u.Gender, u.Role, u.CreatedAt })
-                .FirstOrDefaultAsync();
+            var userProfile = await _userService.GetProfileAsync(userId);
 
             if (userProfile == null)
-                return NotFound(new { Message = ValidationMessages.UserNotFoundInSystem }); // ➔ Sạch hằng số
+                return NotFound(new { Message = ValidationMessages.UserNotFoundInSystem });
 
             return Ok(userProfile);
         }
@@ -73,24 +63,15 @@ namespace RapchieuPhim.API.Controllers
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
             if (string.IsNullOrEmpty(userIdClaim))
-                return Unauthorized(new { Message = ValidationMessages.TokenInvalid }); // ➔ Sạch hằng số
+                return Unauthorized(new { Message = ValidationMessages.TokenInvalid });
 
             int userId = int.Parse(userIdClaim);
-            var user = await _context.Users.FindAsync(userId);
-            if (user == null || !user.IsActive)
-                return NotFound(new { Message = ValidationMessages.AccountNotFoundOrLocked }); // ➔ Sạch hằng số
+            var result = await _userService.UpdateProfileAsync(userId, request);
 
-            if (!DateOnly.TryParseExact(request.DateOfBirth, "yyyy-MM-dd",
-                    CultureInfo.InvariantCulture, DateTimeStyles.None, out var dob))
-                return BadRequest(new { Message = ValidationMessages.DateOfBirthInvalidFormatSimple }); // ➔ Sạch hằng số
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { Message = result.Message });
 
-            user.FullName = request.FullName.Trim();
-            user.Phone = request.Phone.Trim();
-            user.DateOfBirth = dob;
-            user.Gender = string.IsNullOrWhiteSpace(request.Gender) ? null : request.Gender.Trim();
-
-            await _context.SaveChangesAsync();
-            return Ok(new { Message = "Cập nhật hồ sơ cá nhân thành công!" });
+            return Ok(new { Message = result.Message });
         }
 
         // 👑 4. ADMIN CẬP NHẬT NGƯỜI KHÁC (CHỈ ADMIN TỐI CAO ĐƯỢC ĐỔI ROLE)
@@ -98,37 +79,13 @@ namespace RapchieuPhim.API.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AdminUpdate(int id, [FromBody] AdminUpdateUserRequest request)
         {
-            var targetUser = await _context.Users.FindAsync(id);
-            if (targetUser == null)
-                return NotFound(new { Message = ValidationMessages.UserNotFoundWithId(id) });
-
             var currentOperatorEmail = User.FindFirst(ClaimTypes.Email)?.Value;
-            var newRole = request.Role.Trim();
+            var result = await _userService.AdminUpdateAsync(id, request, currentOperatorEmail ?? string.Empty);
 
-            if (targetUser.Role != newRole)
-            {
-                if (currentOperatorEmail != ValidationMessages.SuperAdminEmail) // ➔ Dùng hằng số email chuẩn
-                {
-                    return StatusCode(403, new { Message = ValidationMessages.UnauthorizedRoleChange }); // ➔ Sạch hằng số
-                }
-            }
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { Message = result.Message });
 
-            if (!DateOnly.TryParseExact(request.DateOfBirth, "yyyy-MM-dd",
-                    CultureInfo.InvariantCulture, DateTimeStyles.None, out var dob))
-                return BadRequest(new { Message = ValidationMessages.DateOfBirthInvalidFormatSimple }); // ➔ Sạch hằng số
-
-            var allowedRoles = new[] { "Admin", "Staff", "Customer" };
-            if (!allowedRoles.Contains(newRole))
-                return BadRequest(new { Message = ValidationMessages.RoleSelectionInvalid }); // ➔ Sạch hằng số
-
-            targetUser.FullName = request.FullName.Trim();
-            targetUser.Phone = request.Phone.Trim();
-            targetUser.DateOfBirth = dob;
-            targetUser.Gender = string.IsNullOrWhiteSpace(request.Gender) ? null : request.Gender.Trim();
-            targetUser.Role = newRole;
-
-            await _context.SaveChangesAsync();
-            return Ok(new { Message = ValidationMessages.UserUpdateSuccessWithId(id) });
+            return Ok(new { Message = result.Message });
         }
 
         // 👑 5. XÓA TÀI KHOẢN (CHỈ SUPER ADMIN)
@@ -136,20 +93,13 @@ namespace RapchieuPhim.API.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
-            var user = await _context.Users.FindAsync(id);
-            if (user == null)
-                return NotFound(new { Message = ValidationMessages.UserNotFoundWithId(id) });
-
             var currentOperatorEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+            var result = await _userService.DeleteAsync(id, currentOperatorEmail ?? string.Empty);
 
-            if (currentOperatorEmail != ValidationMessages.SuperAdminEmail) // ➔ Dùng hằng số email chuẩn
-            {
-                return StatusCode(403, new { Message = ValidationMessages.UnauthorizedDelete }); // ➔ Sạch hằng số
-            }
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { Message = result.Message });
 
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
-            return Ok(new { Message = ValidationMessages.UserUpdateSuccessWithId(id) });
+            return Ok(new { Message = result.Message });
         }
 
         // 👑 6. LỌC DANH SÁCH USER THEO QUYỀN (CHỈ ADMIN)
@@ -157,10 +107,7 @@ namespace RapchieuPhim.API.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetByRole(string role)
         {
-            var users = await _context.Users
-                .Where(u => u.Role == role && u.IsActive)
-                .Select(u => new { u.UserId, u.FullName, u.Email, u.Role })
-                .ToListAsync();
+            var users = await _userService.GetByRoleAsync(role);
             return Ok(users);
         }
     }
