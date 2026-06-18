@@ -1,4 +1,4 @@
-﻿namespace RapchieuPhim.API.Constants
+namespace RapchieuPhim.API.Constants
 {
     public static class ValidationMessages
     {
@@ -53,6 +53,9 @@
         public static string UserUpdateSuccessWithId(int id) => $"Đã cập nhật thành công tài khoản ID {id}.";
 
         public static string MovieNotFoundWithId(int id) => $"Không tìm thấy bộ phim có ID: {id}.";
+        public static string SeatNotFoundWithId(int id) => $"Không tìm thấy ghế có ID: {id}.";
+        public static string RoomNotFoundWithId(int id) => $"Không tìm thấy phòng chiếu có ID: {id}.";
+
         #endregion
 
         #region 4. CHU KỲ MÃ OTP & KHÔI PHỤC MẬT KHẨU (OTP & Forgot-Reset Flow)
@@ -96,5 +99,30 @@
         public const string SuperAdminEmail = "admin@123.com";
 
         #endregion
+    }
+
+    // ── Hằng số dành riêng cho phân hệ Quản lý Ghế (Seat) ──────────────────
+    public static class SeatMessages
+    {
+        public const string RoomIdRequired        = "Vui lòng chọn phòng chiếu.";
+        public const string SeatRowRequired       = "Hàng ghế không được để trống.";
+        public const string SeatRowMaxLength      = "Ký hiệu hàng ghế tối đa 5 ký tự.";
+        public const string SeatNumberRequired    = "Số ghế không được để trống.";
+        public const string SeatNumberMaxLength   = "Số ghế tối đa 10 ký tự.";
+        public const string SeatTypeRequired      = "Loại ghế không được để trống.";
+        public const string SeatsPerRowRange      = "Số ghế mỗi hàng phải từ 1 đến 50.";
+        public const string SeatIdsRequired       = "Danh sách ID ghế không được để trống.";
+        public const string SeatAlreadyExists     = "Ghế {0}{1} đã tồn tại trong phòng này.";
+        public const string CreateSeatSuccess     = "Tạo ghế thành công.";
+        public const string CreateBatchSuccess    = "Tạo hàng loạt ghế thành công.";
+        public const string UpdateSeatSuccess     = "Cập nhật thông tin ghế thành công.";
+        public const string UpdateTypeSuccess     = "Cập nhật loại ghế hàng loạt thành công.";
+        public const string UpdateStatusSuccess   = "Cập nhật trạng thái ghế hàng loạt thành công.";
+        public const string DeleteSeatSuccess     = "Đã xóa ghế thành công.";
+        public const string RoomNotFound          = "Phòng chiếu không tồn tại hoặc đã bị vô hiệu hoá.";
+
+        // Loại ghế hợp lệ
+        public static readonly string[] ValidSeatTypes = { "Standard", "VIP", "Couple" };
+        public static string InvalidSeatType(string t) => $"Loại ghế '{t}' không hợp lệ. Chỉ chấp nhận: Standard, VIP, Couple.";
     }
 }
