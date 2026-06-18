@@ -1,9 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using RapchieuPhim.API.Constants;
 
-namespace RapchieuPhim.API.DTOs
+namespace RapchieuPhim.API.DTO.DTORequest
 {
-    public class UpdateMovieRequest
+    public class CreateMovieRequest
     {
         [Required(ErrorMessage = ValidationMessages.MovieTitleRequired)]
         public string Title { get; set; } = null!;
@@ -29,6 +29,8 @@ namespace RapchieuPhim.API.DTOs
         public string? TrailerUrl { get; set; }
 
         [Required(ErrorMessage = ValidationMessages.MovieStatusRequired)]
-        public string Status { get; set; } = null!; // Active | Inactive | Coming Soon
+        public string Status { get; set; } = null!;
+
+        public List<int> CategoryIds { get; set; } = new();
     }
 }

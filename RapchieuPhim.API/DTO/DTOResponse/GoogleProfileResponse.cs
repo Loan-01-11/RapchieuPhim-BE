@@ -1,9 +1,8 @@
-﻿using RapchieuPhim.API.Constants;
+using RapchieuPhim.API.Constants;
 
-
-namespace RapchieuPhim.API.DTOs.Auth
+namespace RapchieuPhim.API.DTO.DTOResponse
 {
-    // ── Response khi Google token hợp lệ nhưng chưa có tài khoản ─────────
+    // ── Response khi Google token hợp lệ nhưng chưa có tài khoản ───────
     public class GoogleProfileResponse
     {
         public bool NeedsAdditionalInfo { get; set; } = true;

@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RapchieuPhim.API.Constants;
-using RapchieuPhim.API.DTOs;
+using RapchieuPhim.API.DTO.DTORequest;
+using RapchieuPhim.API.DTO.DTOResponse;
 using RapchieuPhim.API.Services;
 using System.Security.Claims;
 

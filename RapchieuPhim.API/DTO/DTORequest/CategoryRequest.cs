@@ -1,7 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using RapchieuPhim.API.Constants;
 
-namespace RapchieuPhim.API.DTOs
+namespace RapchieuPhim.API.DTO.DTORequest
 {
     public class CategoryRequest
     {

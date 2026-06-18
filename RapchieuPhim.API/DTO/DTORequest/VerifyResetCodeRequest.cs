@@ -1,10 +1,8 @@
-﻿
 using System.ComponentModel.DataAnnotations;
 using RapchieuPhim.API.Constants;
 
-namespace RapchieuPhim.API.DTOs.Auth
+namespace RapchieuPhim.API.DTO.DTORequest
 {
-    // Verify OTP trước khi cho phép hiện form đổi mật khẩu
     public class VerifyResetCodeRequest
     {
         [Required(ErrorMessage = ValidationMessages.EmailRequired)]

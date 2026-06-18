@@ -1,9 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
-using RapchieuPhim.API.Constants; // 🌟 Import thư mục hằng số để gọi lệnh
+using System.ComponentModel.DataAnnotations;
+using RapchieuPhim.API.Constants;
 
-namespace RapchieuPhim.API.DTOs
+namespace RapchieuPhim.API.DTO.DTORequest
 {
-    public class CreateMovieRequest
+    public class UpdateMovieRequest
     {
         [Required(ErrorMessage = ValidationMessages.MovieTitleRequired)]
         public string Title { get; set; } = null!;
@@ -30,9 +30,5 @@ namespace RapchieuPhim.API.DTOs
 
         [Required(ErrorMessage = ValidationMessages.MovieStatusRequired)]
         public string Status { get; set; } = null!;
-
-        // 🌟 TRƯỜNG MỚI THÊM: Nhận mảng ID các thể loại từ Frontend gửi lên (Ví dụ: [1, 3])
-        // Khởi tạo sẵn '= new()' để tránh lỗi NullReferenceException nếu Frontend quên truyền trường này
-        public List<int> CategoryIds { get; set; } = new();
     }
 }

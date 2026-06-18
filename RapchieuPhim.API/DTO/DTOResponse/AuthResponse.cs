@@ -1,8 +1,6 @@
-using System.ComponentModel.DataAnnotations;
-
-namespace RapchieuPhim.API.DTOs.Auth
+namespace RapchieuPhim.API.DTO.DTOResponse
 {
-    // ?? Response sau khi ��ng nh?p / ��ng k? th�nh c�ng ?????????????????
+    // ── Response sau khi đăng nhập / đăng ký thành công ─────────────────
     public class AuthResponse
     {
         public string Token { get; set; } = null!;
