@@ -1,9 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using RapchieuPhim.API.Constants;
 
-namespace RapchieuPhim.API.DTOs.Auth
+namespace RapchieuPhim.API.DTO.DTORequest
 {
-    // ── Quên mật khẩu: Bước 2 – Đặt lại mật khẩu ────────────────────────
+    // ── Quên mật khẩu: Bước 2 – Đặt lại mật khẩu ──────────────────────
     public class ResetPasswordRequest
     {
         [Required(ErrorMessage = ValidationMessages.EmailRequired)]

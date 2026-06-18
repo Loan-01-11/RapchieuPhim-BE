@@ -1,10 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RapchieuPhim.API.Constants; // 🌟 Gọi thư mục hằng số để xóa bỏ hardcode
 using RapchieuPhim.API.Models;
 using System.Security.Claims;
-using RapchieuPhim.API.DTOs;
+using RapchieuPhim.API.DTO.DTORequest;
 
 namespace RapchieuPhim.API.Controllers
 {

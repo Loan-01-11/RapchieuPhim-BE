@@ -1,7 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using RapchieuPhim.API.Constants;
 
-namespace RapchieuPhim.API.DTOs.Auth
+namespace RapchieuPhim.API.DTO.DTORequest
 {
     // ── Đăng nhập bằng tài khoản Email + Password ─────────────────────────
     public class LoginRequest

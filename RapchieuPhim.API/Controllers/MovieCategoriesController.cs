@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization; // 🌟 BẮT BUỘC: Thư viện phục vụ phân quyền
+using Microsoft.AspNetCore.Authorization; // 🌟 BẮT BUỘC: Thư viện phục vụ phân quyền
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RapchieuPhim.API.Constants;       // 🌟 Gọi file hằng số hệ thống
-using RapchieuPhim.API.DTOs;
+using RapchieuPhim.API.DTO.DTORequest;
 using RapchieuPhim.API.Models;
 
 namespace RapchieuPhim.API.Controllers

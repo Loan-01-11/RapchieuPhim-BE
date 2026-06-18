@@ -84,6 +84,12 @@ builder.Services.AddScoped<IUserService, UserService>();
 // Email Service
 builder.Services.AddScoped<IEmailService, EmailService>();
 
+// Auth Service
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+// User Service
+builder.Services.AddScoped<IUserService, UserService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

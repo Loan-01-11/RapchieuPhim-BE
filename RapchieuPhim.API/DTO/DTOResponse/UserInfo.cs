@@ -1,5 +1,4 @@
-using System.ComponentModel.DataAnnotations;
-namespace RapchieuPhim.API.DTOs.Auth
+namespace RapchieuPhim.API.DTO.DTOResponse
 {
     public class UserInfo
     {

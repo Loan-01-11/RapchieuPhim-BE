@@ -1,4 +1,4 @@
-﻿namespace RapchieuPhim.API.DTOs
+namespace RapchieuPhim.API.DTO.DTOResponse
 {
     public class UserResponse
     {

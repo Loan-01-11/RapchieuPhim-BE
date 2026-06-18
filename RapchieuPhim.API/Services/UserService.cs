@@ -1,6 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RapchieuPhim.API.Constants;
-using RapchieuPhim.API.DTOs;
+using RapchieuPhim.API.DTO.DTORequest;
+using RapchieuPhim.API.DTO.DTOResponse;
 using RapchieuPhim.API.Models;
 using System.Globalization;
 
