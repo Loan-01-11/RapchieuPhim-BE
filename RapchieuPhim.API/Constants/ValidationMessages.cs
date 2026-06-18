@@ -27,12 +27,12 @@ namespace RapchieuPhim.API.Constants
         public const string CategoryNameRequired = "Tên thể loại không được để trống.";
         public const string CategoryUpdateSuccess = "Cập nhật thể loại phim thành công!";
 
-        // Trạng thái phim hợp lệ
-        public const string MovieStatusActive     = "suất đang chiếu";       // Đang chiếu
-        public const string MovieStatusComingSoon = "suất sắp chiếu";  // Sắp chiếu
-        public const string MovieStatusInactive   = "suất đặc biệt";     // Đặc biệt
-        public static readonly string[] ValidMovieStatuses = { "suất đang chiếu", "suất sắp chiếu", "suất đặc biệt" };
-        public static string InvalidMovieStatus(string s) => $"Trạng thái phim '{s}' không hợp lệ. Chỉ chấp nhận: suất đang chiếu, suất sắp chiếu, suất đặc biệt.";
+        // Trạng thái phim hợp lệ (khớp với CINEMA.sql DEFAULT 'Active')
+        public const string MovieStatusActive     = "Active";       // Đang chiếu (trong khoảng ReleaseDate – EndDate)
+        public const string MovieStatusComingSoon = "Coming Soon";  // Sắp chiếu
+        public const string MovieStatusInactive   = "Inactive";     // Ngừng chiếu
+        public static readonly string[] ValidMovieStatuses = { "Active", "Coming Soon", "Inactive" };
+        public static string InvalidMovieStatus(string s) => $"Trạng thái phim '{s}' không hợp lệ. Chỉ chấp nhận: Active, Coming Soon, Inactive.";
 
 
         #endregion
