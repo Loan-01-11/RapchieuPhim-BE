@@ -946,3 +946,72 @@ BEGIN
     SET @Message = 'Shift closed and report generated.';
 END
 GO
+
+
+-- ============================================================
+-- CHECK CONSTRAINTS  (đảm bảo chỉ lưu giá trị hợp lệ vào DB)
+-- ============================================================
+
+-- MOVIES.Status: Active | Coming Soon | Inactive
+ALTER TABLE MOVIES
+    ADD CONSTRAINT CK_MOVIES_STATUS
+    CHECK (Status IN (N'Active', N'Coming Soon', N'Inactive'));
+GO
+
+-- SHOWTIMES.Status: Active | Cancelled | Completed
+ALTER TABLE SHOWTIMES
+    ADD CONSTRAINT CK_SHOWTIMES_STATUS
+    CHECK (Status IN (N'Active', N'Cancelled', N'Completed'));
+GO
+
+-- SEATS.SeatType: Standard | VIP | Couple
+ALTER TABLE SEATS
+    ADD CONSTRAINT CK_SEATS_SEATTYPE
+    CHECK (SeatType IN (N'Standard', N'VIP', N'Couple'));
+GO
+
+-- ROOMS.RoomType: 2D | 3D | IMAX | 4DX (hoặc NULL)
+ALTER TABLE ROOMS
+    ADD CONSTRAINT CK_ROOMS_ROOMTYPE
+    CHECK (RoomType IN (N'2D', N'3D', N'IMAX', N'4DX') OR RoomType IS NULL);
+GO
+
+
+-- ============================================================
+-- SEED DATA  (dữ liệu mẫu để test)
+-- Lưu ý: dùng N'' prefix cho tất cả chuỗi tiếng Việt
+-- ============================================================
+
+-- Khu vực
+INSERT INTO AREAS (AreaName) VALUES
+    (N'Miền Nam'),
+    (N'Miền Trung'),
+    (N'Miền Bắc');
+GO
+
+-- Rạp chiếu phim (cần có Area trước)
+INSERT INTO CINEMAS (AreaId, CinemaName, Address, Phone, IsActive) VALUES
+    (1, N'CGV Hàng Vương',   N'Quận 5, TP.HCM',   N'028-1234-5678', 1),
+    (1, N'Lotte Cinema Q7',  N'Quận 7, TP.HCM',   N'028-8765-4321', 1),
+    (3, N'BHD Star Hà Nội',  N'Cầu Giấy, Hà Nội', N'024-1111-2222', 1);
+GO
+
+-- Phòng chiếu
+INSERT INTO ROOMS (CinemaId, RoomName, RoomType, TotalSeats, IsActive) VALUES
+    (1, N'Phòng chiếu 01', N'2D',   80, 1),
+    (1, N'Phòng chiếu 02', N'3D',   60, 1),
+    (1, N'Phòng chiếu 03', N'IMAX', 40, 1),
+    (2, N'Phòng chiếu 01', N'2D',   80, 1),
+    (2, N'Phòng chiếu 02', N'3D',   60, 1);
+GO
+
+-- Thể loại phim
+INSERT INTO MOVIECATEGORIES (CategoryName) VALUES
+    (N'Hành động'),
+    (N'Hài hước'),
+    (N'Kinh dị'),
+    (N'Tình cảm'),
+    (N'Hoạt hình'),
+    (N'Khoa học viễn tưởng'),
+    (N'Phiêu lưu');
+GO

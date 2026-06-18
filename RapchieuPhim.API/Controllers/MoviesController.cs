@@ -111,8 +111,7 @@ namespace RapchieuPhim.API.Controllers
                 return BadRequest(ModelState);
 
             var result = await _movieService.UpdateAsync(id, request);
-            return StatusCode(result.StatusCode,
-                result.IsSuccess ? new { result.Message } : new { result.Message });
+            return StatusCode(result.StatusCode, new { result.Message });
         }
 
         // 👑 6. XÓA PHIM (CHỈ SUPER ADMIN)

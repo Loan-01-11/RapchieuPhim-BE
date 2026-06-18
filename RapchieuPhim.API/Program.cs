@@ -99,6 +99,10 @@ builder.Services.AddScoped<IMovieCategoryService, MovieCategoryService>();
 // Seat Service
 builder.Services.AddScoped<ISeatService, SeatService>();
 
+// Showtime Service
+builder.Services.AddScoped<IShowtimeService, ShowtimeService>();
+
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

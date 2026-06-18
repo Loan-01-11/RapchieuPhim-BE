@@ -27,6 +27,14 @@ namespace RapchieuPhim.API.Constants
         public const string CategoryNameRequired = "Tên thể loại không được để trống.";
         public const string CategoryUpdateSuccess = "Cập nhật thể loại phim thành công!";
 
+        // Trạng thái phim hợp lệ (khớp với CINEMA.sql DEFAULT 'Active')
+        public const string MovieStatusActive     = "Active";       // Đang chiếu (trong khoảng ReleaseDate – EndDate)
+        public const string MovieStatusComingSoon = "Coming Soon";  // Sắp chiếu
+        public const string MovieStatusInactive   = "Inactive";     // Ngừng chiếu
+        public static readonly string[] ValidMovieStatuses = { "Active", "Coming Soon", "Inactive" };
+        public static string InvalidMovieStatus(string s) => $"Trạng thái phim '{s}' không hợp lệ. Chỉ chấp nhận: Active, Coming Soon, Inactive.";
+
+
         #endregion
 
         #region 2. ĐỊNH DẠNG DỮ LIỆU (Format Validation)
@@ -124,5 +132,34 @@ namespace RapchieuPhim.API.Constants
         // Loại ghế hợp lệ
         public static readonly string[] ValidSeatTypes = { "Standard", "VIP", "Couple" };
         public static string InvalidSeatType(string t) => $"Loại ghế '{t}' không hợp lệ. Chỉ chấp nhận: Standard, VIP, Couple.";
+    }
+
+    // ── Hằng số dành riêng cho phân hệ Quản lý Suất Chiếu (Showtime) ──────────
+    public static class ShowtimeMessages
+    {
+        public const string MovieIdRequired      = "Vui lòng chọn phim.";
+        public const string RoomIdRequired       = "Vui lòng chọn phòng chiếu.";
+        public const string StartTimeRequired    = "Thời gian bắt đầu không được để trống.";
+        public const string BasePriceRequired    = "Giá vé cơ bản không được để trống.";
+        public const string BasePriceTooLow      = "Giá vé cơ bản phải ít nhất 1.000 VNĐ.";
+        public const string StatusRequired       = "Trạng thái suất chiếu không được để trống.";
+
+        public const string CreateSuccess        = "Tạo suất chiếu mới thành công!";
+        public const string UpdateSuccess        = "Cập nhật suất chiếu thành công!";
+        public const string DeleteSuccess        = "Đã xoá suất chiếu thành công!";
+        public const string CancelSuccess        = "Đã huỷ suất chiếu thành công!";
+
+        public const string MovieNotFound        = "Phim không tồn tại hoặc đã bị xoá.";
+        public const string RoomNotFound         = "Phòng chiếu không tồn tại hoặc đã bị vô hiệu hoá.";
+        public const string MovieNotActive       = "Phim đã ngừng chiếu, không thể tạo suất chiếu mới.";
+        public const string StartTimePast        = "Thời gian bắt đầu không được là thời điểm trong quá khứ.";
+        public const string RoomConflict         = "Phòng chiếu đã có suất chiếu khác trong khung giờ này (bao gồm 15 phút dọn phòng).";
+        public const string HasBookings          = "Không thể xoá suất chiếu đã có vé đặt. Vui lòng huỷ suất chiếu thay thế.";
+
+        // Các trạng thái hợp lệ
+        public static readonly string[] ValidStatuses = { "Active", "Cancelled", "Completed" };
+        public static string InvalidStatus(string s) => $"Trạng thái '{s}' không hợp lệ. Chỉ chấp nhận: Active, Cancelled, Completed.";
+
+        public static string NotFoundWithId(int id) => $"Không tìm thấy suất chiếu có ID: {id}.";
     }
 }

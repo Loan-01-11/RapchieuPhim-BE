@@ -47,34 +47,39 @@ namespace RapchieuPhim.API.Services
                 .ToListAsync();
         }
 
-        // 🔓 3b. PHIM ĐANG CHIẾU
+        // 🔓 3b. PHIM ĐANG CHIẾU (Status = "Active" và trong khoảng ReleaseDate – EndDate)
         public async Task<List<Movie>> GetNowShowingAsync()
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
             return await _context.Movies
-                .Where(m => m.Status == "suất đang chiếu" && m.ReleaseDate <= today && m.EndDate >= today)
+                .Where(m => m.Status == ValidationMessages.MovieStatusActive
+                         && m.ReleaseDate <= today && m.EndDate >= today)
                 .ToListAsync();
         }
 
-        // 🔓 3c. PHIM SẮP CHIẾU
+        // 🔓 3c. PHIM SẮP CHIẾU (Status = "Coming Soon")
         public async Task<List<Movie>> GetComingSoonAsync()
         {
             return await _context.Movies
-                .Where(m => m.Status == "suất sắp chiếu")
+                .Where(m => m.Status == ValidationMessages.MovieStatusComingSoon)
                 .ToListAsync();
         }
 
-        // 🔓 3d. PHIM ĐẶC BIỆT
+        // 🔓 3d. PHIM KHÔNG HOẠT ĐỘNG (Status = "Inactive")
         public async Task<List<Movie>> GetSpecialAsync()
         {
             return await _context.Movies
-                .Where(m => m.Status == "suất đặc biệt")
+                .Where(m => m.Status == ValidationMessages.MovieStatusInactive)
                 .ToListAsync();
         }
 
         // 👑 4. THÊM PHIM MỚI (ADMIN)
         public async Task<(bool IsSuccess, string Message, int StatusCode, object? Data)> CreateAsync(CreateMovieRequest request, int createdByUserId)
         {
+            // Kiểm tra status hợp lệ
+            if (!ValidationMessages.ValidMovieStatuses.Contains(request.Status.Trim()))
+                return (false, ValidationMessages.InvalidMovieStatus(request.Status), 400, null);
+
             var movie = new Movie
             {
                 Title       = request.Title.Trim(),
@@ -118,6 +123,9 @@ namespace RapchieuPhim.API.Services
             if (movie == null)
                 return (false, ValidationMessages.MovieNotFoundWithId(id), 404, null);
 
+            // Kiểm tra status hợp lệ
+            if (!ValidationMessages.ValidMovieStatuses.Contains(request.Status.Trim()))
+                return (false, ValidationMessages.InvalidMovieStatus(request.Status), 400, null);
             movie.Title       = request.Title.Trim();
             movie.Description = request.Description?.Trim();
             movie.Duration    = request.Duration;
