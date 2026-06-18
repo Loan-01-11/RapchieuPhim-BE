@@ -30,19 +30,24 @@ namespace RapchieuPhim.API.Services
         // 🔓 1. LẤY TẤT CẢ PHIM
         public async Task<List<Movie>> GetAllAsync()
         {
-            return await _context.Movies.ToListAsync();
+            return await _context.Movies
+                .Include(m => m.Categories)
+                .ToListAsync();
         }
 
         // 🔓 2. XEM CHI TIẾT PHIM THEO ID
         public async Task<Movie?> GetByIdAsync(int id)
         {
-            return await _context.Movies.FindAsync(id);
+            return await _context.Movies
+                .Include(m => m.Categories)
+                .FirstOrDefaultAsync(m => m.MovieId == id);
         }
 
         // 🔓 3. LỌC PHIM THEO TRẠNG THÁI
         public async Task<List<Movie>> GetByStatusAsync(string status)
         {
             return await _context.Movies
+                .Include(m => m.Categories)
                 .Where(m => m.Status == status)
                 .ToListAsync();
         }
@@ -52,6 +57,7 @@ namespace RapchieuPhim.API.Services
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
             return await _context.Movies
+                .Include(m => m.Categories)
                 .Where(m => m.Status == "suất đang chiếu" && m.ReleaseDate <= today && m.EndDate >= today)
                 .ToListAsync();
         }
@@ -60,6 +66,7 @@ namespace RapchieuPhim.API.Services
         public async Task<List<Movie>> GetComingSoonAsync()
         {
             return await _context.Movies
+                .Include(m => m.Categories)
                 .Where(m => m.Status == "suất sắp chiếu")
                 .ToListAsync();
         }
@@ -68,6 +75,7 @@ namespace RapchieuPhim.API.Services
         public async Task<List<Movie>> GetSpecialAsync()
         {
             return await _context.Movies
+                .Include(m => m.Categories)
                 .Where(m => m.Status == "suất đặc biệt")
                 .ToListAsync();
         }
