@@ -108,6 +108,9 @@ builder.Services.AddScoped<IAreaService, AreaService>();
 //Cinema Service
 builder.Services.AddScoped<ICinemaService, CinemaService>();
 
+//Room Service
+builder.Services.AddScoped<IRoomService, RoomService>();
+
 
 var app = builder.Build();
 

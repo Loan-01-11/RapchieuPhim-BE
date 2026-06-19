@@ -135,6 +135,18 @@ namespace RapchieuPhim.API.Constants
         public const string SuperAdminEmail = "admin@123.com";
 
         #endregion
+
+        #region 11. PHÂN HỆ QUẢN LÝ PHÒNG CHIẾU (Room Management)
+
+        public const string RoomNameRequired = "Tên phòng chiếu không được để trống.";
+        public const string RoomNameMaxLength = "Tên phòng chiếu không được vượt quá 100 ký tự.";
+        public const string RoomTypeMaxLength = "Loại phòng chiếu không được vượt quá 50 ký tự.";
+        public const string RoomCinemaRequired = "Vui lòng chọn rạp chiếu phim hợp lệ cho phòng chiếu này.";
+        public const string RoomUpdateSuccess = "Cập nhật thông tin phòng chiếu thành công!";
+        public const string RoomDeleteSuccess = "Xóa phòng chiếu thành công!";
+        public const string RoomConcurrencyError = "Dữ liệu phòng chiếu đã bị thay đổi bởi một luồng khác, vui lòng thử lại.";
+        public const string UnauthorizedRoomUpdate = "Bạn không có quyền chỉnh sửa thông tin phòng chiếu này.";
+        #endregion
     }
 
     // ── Hằng số dành riêng cho phân hệ Quản lý Ghế (Seat) ──────────────────
