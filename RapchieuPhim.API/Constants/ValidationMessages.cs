@@ -167,10 +167,21 @@ namespace RapchieuPhim.API.Constants
     {
         public const string MovieIdRequired      = "Vui lòng chọn phim.";
         public const string RoomIdRequired       = "Vui lòng chọn phòng chiếu.";
-        public const string StartTimeRequired    = "Thời gian bắt đầu không được để trống.";
+        public const string ShowDateRequired     = "Ngày chiếu không được để trống.";
+        public const string StartTimeRequired    = "Giờ bắt đầu không được để trống.";
+        public const string EndTimeRequired      = "Giờ kết thúc không được để trống.";
         public const string BasePriceRequired    = "Giá vé cơ bản không được để trống.";
         public const string BasePriceTooLow      = "Giá vé cơ bản phải ít nhất 1.000 VNĐ.";
         public const string StatusRequired       = "Trạng thái suất chiếu không được để trống.";
+
+        // Lỗi định dạng
+        public const string ShowDateInvalidFormat = "Ngày chiếu không đúng định dạng. Vui lòng dùng yyyy-MM-dd (ví dụ: 2026-07-01).";
+        public const string StartTimeInvalidFormat = "Giờ bắt đầu không đúng định dạng. Vui lòng dùng HH:mm (ví dụ: 09:00).";
+        public const string EndTimeInvalidFormat  = "Giờ kết thúc không đúng định dạng. Vui lòng dùng HH:mm (ví dụ: 11:00).";
+
+        // Lỗi logic thời gian
+        public const string EndTimeBeforeStart   = "Giờ kết thúc phải sau giờ bắt đầu.";
+        public const string StartTimePast        = "Ngày và giờ bắt đầu không được là thời điểm trong quá khứ.";
 
         public const string CreateSuccess        = "Tạo suất chiếu mới thành công!";
         public const string UpdateSuccess        = "Cập nhật suất chiếu thành công!";
@@ -180,7 +191,6 @@ namespace RapchieuPhim.API.Constants
         public const string MovieNotFound        = "Phim không tồn tại hoặc đã bị xoá.";
         public const string RoomNotFound         = "Phòng chiếu không tồn tại hoặc đã bị vô hiệu hoá.";
         public const string MovieNotActive       = "Phim đã ngừng chiếu, không thể tạo suất chiếu mới.";
-        public const string StartTimePast        = "Thời gian bắt đầu không được là thời điểm trong quá khứ.";
         public const string RoomConflict         = "Phòng chiếu đã có suất chiếu khác trong khung giờ này (bao gồm 15 phút dọn phòng).";
         public const string HasBookings          = "Không thể xoá suất chiếu đã có vé đặt. Vui lòng huỷ suất chiếu thay thế.";
 
