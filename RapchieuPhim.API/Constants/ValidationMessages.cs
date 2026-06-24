@@ -147,6 +147,51 @@ namespace RapchieuPhim.API.Constants
         public const string RoomConcurrencyError = "Dữ liệu phòng chiếu đã bị thay đổi bởi một luồng khác, vui lòng thử lại.";
         public const string UnauthorizedRoomUpdate = "Bạn không có quyền chỉnh sửa thông tin phòng chiếu này.";
         #endregion
+
+        #region 12. PHÂN HỆ QUẢN LÝ VÉ (Ticket Management)
+
+        public const string TicketCodeRequired = "Mã vé không được để trống.";
+        public const string TicketStatusRequired = "Trạng thái vé không được để trống.";
+        public const string TicketStatusInvalid = "Trạng thái vé không hợp lệ (Chỉ chấp nhận: Active | Used | Cancelled).";
+        public const string TicketUpdateStatusSuccess = "Cập nhật trạng thái vé thành công!";
+        public const string TicketConcurrencyError = "Dữ liệu vé đã bị thay đổi bởi một luồng khác, vui lòng thử lại.";
+
+        // --- CÁC HÀM TRẢ VỀ THÔNG BÁO CHỨA BIẾN ĐỘNG ĐỘNG ---
+        public static string TicketNotFoundWithId(int id) => $"Không tìm thấy vé có ID = {id}.";
+        public static string TicketNotFoundWithCode(string code) => $"Không tìm thấy vé mang mã Code: {code}.";
+        public static string TicketNotFoundWithBooking(int bookingId) => $"Không tìm thấy vé nào thuộc đơn đặt vé ID: {bookingId}.";
+
+        #endregion
+
+        #region 13. PHÂN HỆ CẤU HÌNH GIÁ VÉ (Ticket Pricing Management)
+
+        public const string PricingPriceInvalid = "Giá vé cấu hình phải lớn hơn hoặc bằng 0.";
+        public const string PricingRoomTypeMaxLength = "Loại phòng chiếu không được vượt quá 50 ký tự.";
+        public const string PricingSeatTypeMaxLength = "Loại ghế không được vượt quá 30 ký tự.";
+        public const string PricingDayTypeMaxLength = "Loại ngày không được vượt quá 20 ký tự.";
+        public const string PricingUpdateSuccess = "Cập nhật cấu hình giá vé thành công!";
+        public const string PricingDeleteSuccess = "Xóa cấu hình giá vé khỏi hệ thống thành công!";
+        public const string PricingConcurrencyError = "Dữ liệu cấu hình giá đã bị thay đổi bởi một luồng khác, vui lòng thử lại.";
+        public const string UnauthorizedPricingUpdate = "Quyền hạn bị từ chối! Chỉ Admin tối cao mới được quyền chỉnh sửa ma trận giá vé.";
+
+        // --- CÁC HÀM TRẢ VỀ THÔNG BÁO CHỨA BIẾN ĐỘNG ĐỘNG ---
+        public static string PricingNotFoundWithId(int id) => $"Không tìm thấy cấu hình giá vé có ID = {id}.";
+
+        #endregion
+
+        #region 14. PHÂN HỆ QUẢN LÝ ĐẶT VÉ (Booking Management)
+
+        public const string BookingTypeInvalid = "Phương thức đặt vé không hợp lệ (Chỉ chấp nhận: Online | Counter).";
+        public const string BookingStatusInvalid = "Trạng thái đơn đặt vé không hợp lệ.";
+        public const string BookingUpdateStatusSuccess = "Cập nhật trạng thái đơn đặt vé thành công!";
+        public const string BookingConcurrencyError = "Dữ liệu đơn đặt vé đã bị thay đổi bởi một luồng khác, vui lòng thử lại.";
+        public const string UnauthorizedBookingView = "Bạn không có quyền xem lịch sử đặt vé của tài khoản này.";
+        public const string UnauthorizedBookingCancel = "Bạn không có quyền hủy đơn đặt vé này.";
+
+        // --- CÁC HÀM TRẢ VỀ THÔNG BÁO CHỨA BIẾN ĐỘNG ĐỘNG ---
+        public static string BookingNotFoundWithId(int id) => $"Không tìm thấy đơn đặt vé có ID = {id}.";
+
+        #endregion
     }
 
     // ── Hằng số dành riêng cho phân hệ Quản lý Ghế (Seat) ──────────────────

@@ -111,6 +111,14 @@ builder.Services.AddScoped<ICinemaService, CinemaService>();
 //Room Service
 builder.Services.AddScoped<IRoomService, RoomService>();
 
+//Ticket Service
+builder.Services.AddScoped<ITicketService, TicketService>();
+
+// Ticket Pricing ervice
+builder.Services.AddScoped<ITicketPricingService, TicketPricingService>();
+
+//Booking Service
+builder.Services.AddScoped<IBookingService, BookingService>();
 
 var app = builder.Build();
 

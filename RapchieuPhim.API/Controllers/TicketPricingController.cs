@@ -1,90 +1,98 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using RapchieuPhim.API.Models;
+using RapchieuPhim.API.Constants;      // Dùng hệ thống hằng hố sạch
+using RapchieuPhim.API.DTOs.DTORequest; // Khay hứng dữ liệu vào sạch rác Swagger
+using RapchieuPhim.API.DTOs.DTOResponse;// Khay trả dữ liệu ra
+using RapchieuPhim.API.Services;      // Giao tiếp Service lớp nghiệp vụ
+using System.Security.Claims;
 
 namespace RapchieuPhim.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize] // 🔐 KHÓA TỔNG: Bắt buộc phải đăng nhập (có Token) mới được tương tác với cấu hình giá vé
     public class TicketPricingController : ControllerBase
     {
-        private readonly CinemaManagementContext _context;
+        private readonly ITicketPricingService _pricingService;
 
-        public TicketPricingController(CinemaManagementContext context)
+        // Tiêm Service thông qua hàm khởi tạo Constructor
+        public TicketPricingController(ITicketPricingService pricingService)
         {
-            _context = context;
+            _pricingService = pricingService;
         }
 
-        // GET: api/TicketPricing
+        // GET: api/TicketPricing 👑 (CHỈ ADMIN VÀ STAFF MỚI ĐƯỢC XEM TOÀN BỘ MA TRẬN GIÁ)
         [HttpGet]
+        [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> GetAll()
         {
-            var pricing = await _context.Ticketpricings.ToListAsync();
+            var pricing = await _pricingService.GetAllAsync();
             return Ok(pricing);
         }
 
-        // GET: api/TicketPricing/{id}
+        // GET: api/TicketPricing/{id} 👑 (CHỈ ADMIN VÀ STAFF MỚI ĐƯỢC XEM CHI TIẾT)
         [HttpGet("{id}")]
+        [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> GetById(int id)
         {
-            var pricing = await _context.Ticketpricings.FindAsync(id);
+            var pricing = await _pricingService.GetByIdAsync(id);
             if (pricing == null)
-                return NotFound(new { Message = $"TicketPricing with id {id} not found." });
+                return NotFound(new { Message = ValidationMessages.PricingNotFoundWithId(id) });
+
             return Ok(pricing);
         }
 
-        // GET: api/TicketPricing/Active – currently effective pricing rules
+        // GET: api/TicketPricing/Active 🔓 (TẤT CẢ MỌI NGƯỜI ĐÃ ĐĂNG NHẬP ĐỀU XEM ĐƯỢC ĐỂ TÍNH TIỀN VÉ)
         [HttpGet("Active")]
         public async Task<IActionResult> GetActive()
         {
-            var today = DateOnly.FromDateTime(DateTime.Today);
-            var pricing = await _context.Ticketpricings
-                .Where(p => p.IsActive && p.EffectFrom <= today && (p.EffectTo == null || p.EffectTo >= today))
-                .ToListAsync();
+            var pricing = await _pricingService.GetActiveAsync();
             return Ok(pricing);
         }
 
-        // POST: api/TicketPricing
+        // POST: api/TicketPricing 👑 (CHỈ ADMIN MỚI ĐƯỢC TẠO QUY TẮC GIÁ MỚI)
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Ticketpricing pricing)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Create([FromBody] TicketPricingRequest request)
         {
-            _context.Ticketpricings.Add(pricing);
-            await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetById), new { id = pricing.PricingId }, pricing);
+            // Bóc tách Token lấy ID của ông Admin đang ngồi click tạo bảng giá để gán vào cột CreatedBy dưới DB
+            var creatorIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+            int creatorId = string.IsNullOrEmpty(creatorIdClaim) ? 0 : int.Parse(creatorIdClaim);
+
+            var result = await _pricingService.CreateAsync(request, creatorId);
+            return CreatedAtAction(nameof(GetById), new { id = result.PricingId }, result);
         }
 
-        // PUT: api/TicketPricing/{id}
+        // PUT: api/TicketPricing/{id} 👑 (CHỈ ADMIN TỐI CAO ĐƯỢC PHÉP CHỈNH SỬA)
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] Ticketpricing pricing)
+        [Authorize(Roles = "Admin")] // Admin thường lọt cửa 1 nhưng dính bẫy email SuperAdmin ở tầng Service
+        public async Task<IActionResult> Update(int id, [FromBody] TicketPricingRequest request)
         {
-            if (id != pricing.PricingId)
-                return BadRequest(new { Message = "Id mismatch." });
+            // Bóc Token lấy Email của tài khoản đang bấm nút Lưu cấu hình
+            var currentOperatorEmail = User.FindFirst(ClaimTypes.Email)?.Value;
 
-            _context.Entry(pricing).State = EntityState.Modified;
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_context.Ticketpricings.Any(e => e.PricingId == id))
-                    return NotFound(new { Message = $"TicketPricing with id {id} not found." });
-                throw;
-            }
-            return NoContent();
+            var result = await _pricingService.UpdateAsync(id, request, currentOperatorEmail ?? string.Empty);
+
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { Message = result.Message });
+
+            return Ok(new { Message = result.Message });
         }
 
-        // DELETE: api/TicketPricing/{id}
+        // DELETE: api/TicketPricing/{id} 👑 (CHỈ ADMIN TỐI CAO ĐƯỢC PHÉP XÓA)
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
-            var pricing = await _context.Ticketpricings.FindAsync(id);
-            if (pricing == null)
-                return NotFound(new { Message = $"TicketPricing with id {id} not found." });
+            // Bóc Token lấy Email của tài khoản đang bấm nút Xóa cấu hình
+            var currentOperatorEmail = User.FindFirst(ClaimTypes.Email)?.Value;
 
-            _context.Ticketpricings.Remove(pricing);
-            await _context.SaveChangesAsync();
-            return NoContent();
+            var result = await _pricingService.DeleteAsync(id, currentOperatorEmail ?? string.Empty);
+
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { Message = result.Message });
+
+            return Ok(new { Message = result.Message });
         }
     }
 }

@@ -1,88 +1,104 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using RapchieuPhim.API.Models;
+using RapchieuPhim.API.Constants;      // Hằng số sạch
+using RapchieuPhim.API.DTOs.DTORequest; // Khay hứng đầu vào gọn gàng
+using RapchieuPhim.API.Services;      // Tầng giao tiếp nghiệp vụ
+using System.Security.Claims;
 
 namespace RapchieuPhim.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize] // 🔐 KHÓA TỔNG: Phải có Token đăng nhập mới được sờ vào nghiệp vụ Đặt vé
     public class BookingsController : ControllerBase
     {
-        private readonly CinemaManagementContext _context;
+        private readonly IBookingService _bookingService;
 
-        public BookingsController(CinemaManagementContext context)
+        public BookingsController(IBookingService bookingService)
         {
-            _context = context;
+            _bookingService = bookingService;
         }
 
-        // GET: api/Bookings
+        // GET: api/Bookings 👑 (CHỈ ADMIN VÀ STAFF MỚI ĐƯỢC XEM TOÀN BỘ DANH SÁCH ĐƠN VÉ)
         [HttpGet]
+        [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> GetAll()
         {
-            var bookings = await _context.Bookings.ToListAsync();
+            var bookings = await _bookingService.GetAllDetailsAsync();
             return Ok(bookings);
         }
 
-        // GET: api/Bookings/{id}
+        // GET: api/Bookings/{id} 👑 (CHỈ ADMIN VÀ STAFF MỚI ĐƯỢC XEM CHI TIẾT THEO ID ĐƠN THÔ)
         [HttpGet("{id}")]
+        [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> GetById(int id)
         {
-            var booking = await _context.Bookings.FindAsync(id);
+            var booking = await _bookingService.GetDetailByIdAsync(id);
             if (booking == null)
-                return NotFound(new { Message = $"Booking with id {id} not found." });
+                return NotFound(new { Message = ValidationMessages.BookingNotFoundWithId(id) });
             return Ok(booking);
         }
 
-        // GET: api/Bookings/ByUser/{userId} – purchase history (UC-10)
+        // GET: api/Bookings/ByUser/{userId} 🛡️ (XEM LỊCH SỬ MUA VÉ - Khách chỉ tự xem của mình, Admin xem hết)
         [HttpGet("ByUser/{userId}")]
         public async Task<IActionResult> GetByUser(int userId)
         {
-            var bookings = await _context.Bookings
-                .Where(b => b.UserId == userId)
-                .OrderByDescending(b => b.BookingDate)
-                .ToListAsync();
-            return Ok(bookings);
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var currentRole = User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
+
+            var result = await _bookingService.GetHistoryByUserAsync(userId, currentUserId, currentRole);
+            if (!result.IsSuccess)
+                return StatusCode(403, new { Message = result.Message });
+
+            return Ok(result.Data);
         }
 
-        // GET: api/Bookings/Detail – uses VW_BOOKING_DETAIL view
+        // GET: api/Bookings/Detail 👑 (CHỈ ADMIN/STAFF MỚI ĐƯỢC QUÉT VIEW DOANH THU)
         [HttpGet("Detail")]
+        [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> GetDetail()
         {
-            var detail = await _context.VwBookingDetails.ToListAsync();
+            var detail = await _bookingService.GetAllDetailsAsync();
             return Ok(detail);
         }
 
-        // GET: api/Bookings/AvailableSeats/{showTimeId} – uses VW_AVAILABLE_SEATS view
+        // GET: api/Bookings/AvailableSeats/{showTimeId} 🔓 (TẤT CẢ USER ĐÃ ĐĂNG NHẬP ĐỀU XEM ĐƯỢC ĐỂ CHỌN GHẾ)
         [HttpGet("AvailableSeats/{showTimeId}")]
         public async Task<IActionResult> GetAvailableSeats(int showTimeId)
         {
-            var seats = await _context.VwAvailableSeats
-                .Where(s => s.ShowTimeId == showTimeId)
-                .ToListAsync();
+            var seats = await _bookingService.GetAvailableSeatsAsync(showTimeId);
             return Ok(seats);
         }
 
-        // POST: api/Bookings
+        // POST: api/Bookings 🔓 (TẤT CẢ USER ĐỀU ĐẶT ĐƯỢC - Tự động nhận diện Online/Quầy và tự bóc ID)
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Booking booking)
+        public async Task<IActionResult> Create([FromBody] BookingCreateRequest request)
         {
-            booking.BookingDate = DateTime.Now;
-            _context.Bookings.Add(booking);
-            await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetById), new { id = booking.BookingId }, booking);
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var currentRole = User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
+
+            // 🌟 SỬA ĐÒNG NÀY: Đổi .CreateAsync thành .CreateBookingAsync
+            var result = await _bookingService.CreateBookingAsync(request, currentUserId, currentRole);
+
+            if (!result.IsSuccess)
+                return BadRequest(new { Message = result.Message });
+
+            return Ok(new { Message = result.Message, BookingId = result.BookingId });
         }
 
-        // PUT: api/Bookings/{id}/Status – update booking status (Confirmed | Cancelled)
-        [HttpPut("{id}/Status")]
-        public async Task<IActionResult> UpdateStatus(int id, [FromBody] string status)
+        // DELETE: api/Bookings/{id} 🛡️ (HỦY ĐƠN VÉ - Sử dụng Stored Procedure an toàn đa tầng)
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> CancelBooking(int id)
         {
-            var booking = await _context.Bookings.FindAsync(id);
-            if (booking == null)
-                return NotFound(new { Message = $"Booking with id {id} not found." });
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var currentRole = User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
 
-            booking.Status = status;
-            await _context.SaveChangesAsync();
-            return NoContent();
+            var result = await _bookingService.CancelBookingAsync(id, currentUserId, currentRole);
+
+            if (!result.IsSuccess)
+                return BadRequest(new { Message = result.Message });
+
+            return Ok(new { Message = result.Message });
         }
     }
 }
