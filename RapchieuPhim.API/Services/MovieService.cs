@@ -52,31 +52,31 @@ namespace RapchieuPhim.API.Services
                 .ToListAsync();
         }
 
-        // 🔓 3b. PHIM ĐANG CHIẾU
+        // 🎬 3a. PHIM ĐANG CHIẾU
         public async Task<List<Movie>> GetNowShowingAsync()
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
             return await _context.Movies
                 .Include(m => m.Categories)
-                .Where(m => m.Status == "suất đang chiếu" && m.ReleaseDate <= today && m.EndDate >= today)
+                .Where(m => m.Status == MovieStatus.NowShowing && m.ReleaseDate <= today && m.EndDate >= today) // 🌟 Dùng hằng số
                 .ToListAsync();
         }
 
-        // 🔓 3c. PHIM SẮP CHIẾU
+        // 🎬 3b. PHIM SẮP CHIẾU
         public async Task<List<Movie>> GetComingSoonAsync()
         {
             return await _context.Movies
                 .Include(m => m.Categories)
-                .Where(m => m.Status == "suất sắp chiếu")
+                .Where(m => m.Status == MovieStatus.ComingSoon) // 🌟 Dùng hằng số
                 .ToListAsync();
         }
 
-        // 🔓 3d. PHIM ĐẶC BIỆT
+        // 🎬 3c. PHIM ĐẶC BIỆT
         public async Task<List<Movie>> GetSpecialAsync()
         {
             return await _context.Movies
                 .Include(m => m.Categories)
-                .Where(m => m.Status == "suất đặc biệt")
+                .Where(m => m.Status == MovieStatus.Special) // 🌟 Dùng hằng số
                 .ToListAsync();
         }
 
