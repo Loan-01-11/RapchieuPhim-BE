@@ -112,8 +112,7 @@ namespace RapchieuPhim.API.Services
             if (movie == null)
                 return (false, ShowtimeMessages.MovieNotFound, 404, null);
 
-            var deletedStatuses = new[] { "Deleted", "Archived" };
-            if (deletedStatuses.Contains(movie.Status))
+            if (ShowtimeMessages.InactiveMovieStatuses.Contains(movie.Status))
                 return (false, ShowtimeMessages.MovieNotActive, 409, null);
 
             // ── Validate phòng tồn tại và đang hoạt động ─────────────────────────
@@ -126,7 +125,7 @@ namespace RapchieuPhim.API.Services
             var bufferEnd = endTime.AddMinutes(CleaningBufferMinutes);
             var conflict = await _context.Showtimes.AnyAsync(s =>
                 s.RoomId == request.RoomId &&
-                s.Status != "Cancelled" &&
+                s.Status != ShowtimeMessages.StatusCancelled &&
                 startTime < s.EndTime.AddMinutes(CleaningBufferMinutes) &&
                 bufferEnd > s.StartTime);
 
@@ -141,7 +140,7 @@ namespace RapchieuPhim.API.Services
                 StartTime = startTime,
                 EndTime   = endTime,
                 BasePrice = request.BasePrice,
-                Status    = "Active"
+                Status    = ShowtimeMessages.StatusActive
             };
 
             _context.Showtimes.Add(showtime);
@@ -194,7 +193,7 @@ namespace RapchieuPhim.API.Services
             var conflict = await _context.Showtimes.AnyAsync(s =>
                 s.ShowTimeId != id &&
                 s.RoomId == request.RoomId &&
-                s.Status != "Cancelled" &&
+                s.Status != ShowtimeMessages.StatusCancelled &&
                 startTime < s.EndTime.AddMinutes(CleaningBufferMinutes) &&
                 bufferEnd > s.StartTime);
 
@@ -221,10 +220,10 @@ namespace RapchieuPhim.API.Services
             if (showtime == null)
                 return (false, ShowtimeMessages.NotFoundWithId(id), 404, null);
 
-            if (showtime.Status == "Cancelled")
-                return (false, "Suất chiếu này đã được huỷ trước đó.", 409, null);
+            if (showtime.Status == ShowtimeMessages.StatusCancelled)
+                return (false, ShowtimeMessages.AlreadyCancelled, 409, null);
 
-            showtime.Status = "Cancelled";
+            showtime.Status = ShowtimeMessages.StatusCancelled;
             await _context.SaveChangesAsync();
 
             return (true, ShowtimeMessages.CancelSuccess, 200, null);

@@ -252,8 +252,18 @@ namespace RapchieuPhim.API.Constants
         public const string HasBookings          = "Không thể xoá suất chiếu đã có vé đặt. Vui lòng huỷ suất chiếu thay thế.";
 
         // Các trạng thái hợp lệ
-        public static readonly string[] ValidStatuses = { "Active", "Cancelled", "Completed" };
+        public const string StatusActive    = "Active";
+        public const string StatusCancelled = "Cancelled";
+        public const string StatusCompleted = "Completed";
+
+        public static readonly string[] ValidStatuses = { StatusActive, StatusCancelled, StatusCompleted };
         public static string InvalidStatus(string s) => $"Trạng thái '{s}' không hợp lệ. Chỉ chấp nhận: Active, Cancelled, Completed.";
+
+        // Thông báo huỷ lặp
+        public const string AlreadyCancelled = "Suất chiếu này đã được huỷ trước đó.";
+
+        // Trạng thái phim không được phép tạo suất chiếu mới
+        public static readonly string[] InactiveMovieStatuses = { "Deleted", "Archived" };
 
         public static string NotFoundWithId(int id) => $"Không tìm thấy suất chiếu có ID: {id}.";
     }
