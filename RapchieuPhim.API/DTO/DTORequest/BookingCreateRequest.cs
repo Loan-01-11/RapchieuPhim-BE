@@ -1,6 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
-namespace RapchieuPhim.API.DTOs.DTORequest
+namespace RapchieuPhim.API.DTO.DTORequest
 {
     public class BookingCreateRequest
     {

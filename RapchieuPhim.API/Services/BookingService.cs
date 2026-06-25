@@ -1,7 +1,7 @@
-﻿using Microsoft.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using RapchieuPhim.API.Constants;
-using RapchieuPhim.API.DTOs.DTORequest;
+using RapchieuPhim.API.DTO.DTORequest;
 using RapchieuPhim.API.DTOs.DTOResponse;
 using RapchieuPhim.API.Models;
 using System.Data;

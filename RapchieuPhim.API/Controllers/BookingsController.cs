@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RapchieuPhim.API.Constants;      // Hằng số sạch
-using RapchieuPhim.API.DTOs.DTORequest; // Khay hứng đầu vào gọn gàng
+using RapchieuPhim.API.DTO.DTORequest; // Khay hứng đầu vào gọn gàng
 using RapchieuPhim.API.Services;      // Tầng giao tiếp nghiệp vụ
 using System.Security.Claims;
 
@@ -13,10 +13,12 @@ namespace RapchieuPhim.API.Controllers
     public class BookingsController : ControllerBase
     {
         private readonly IBookingService _bookingService;
+        private readonly ISeatHoldService _seatHoldService;
 
-        public BookingsController(IBookingService bookingService)
+        public BookingsController(IBookingService bookingService, ISeatHoldService seatHoldService)
         {
-            _bookingService = bookingService;
+            _bookingService    = bookingService;
+            _seatHoldService   = seatHoldService;
         }
 
         // GET: api/Bookings 👑 (CHỈ ADMIN VÀ STAFF MỚI ĐƯỢC XEM TOÀN BỘ DANH SÁCH ĐƠN VÉ)
@@ -99,6 +101,47 @@ namespace RapchieuPhim.API.Controllers
                 return BadRequest(new { Message = result.Message });
 
             return Ok(new { Message = result.Message });
+        }
+
+        // ────────────────────────────────────────────────────────────────────────
+        // SEAT HOLD: GIỮ GHỪ TẠM THỜI – TRÁNH NHIỀU NGƯỜI ĐẶT CÙNG LÚC
+        // ────────────────────────────────────────────────────────────────────────
+
+        // POST: api/Bookings/Hold 🔐 (CẦN ĐĂNG NHẬP)
+        [HttpPost("Hold")]
+        public IActionResult HoldSeat([FromBody] SeatHoldRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var (isSuccess, message, holdKey) = _seatHoldService.HoldSeat(userId, request.ShowTimeId, request.SeatId);
+
+            if (!isSuccess)
+                return Conflict(new { Message = message });
+
+            return Ok(new
+            {
+                Message = message,
+                HoldKey = holdKey,
+                ExpiresInMinutes = 5
+            });
+        }
+
+        // DELETE: api/Bookings/Hold 🔐 (HUỶ GIỮ GHỪ - CẦN ĐĂNG NHẬP)
+        [HttpDelete("Hold")]
+        public IActionResult ReleaseHold([FromBody] SeatReleaseRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var (isSuccess, message) = _seatHoldService.ReleaseHold(request.HoldKey, userId);
+
+            if (!isSuccess)
+                return BadRequest(new { Message = message });
+
+            return Ok(new { Message = message });
         }
     }
 }

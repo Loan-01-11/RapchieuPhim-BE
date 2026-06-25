@@ -120,6 +120,9 @@ builder.Services.AddScoped<ITicketPricingService, TicketPricingService>();
 //Booking Service
 builder.Services.AddScoped<IBookingService, BookingService>();
 
+// Seat Hold Service (Singleton để giữ state cache xuyên request)
+builder.Services.AddSingleton<ISeatHoldService, SeatHoldService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

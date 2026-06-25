@@ -12,6 +12,8 @@ namespace RapchieuPhim.API.Services
         Task<List<Showtime>> GetByMovieAsync(int movieId);
         Task<List<Showtime>> GetByRoomAsync(int roomId);
         Task<List<VwShowtimeDetail>> GetDetailAsync();
+        Task<List<VwShowtimeDetail>> SearchAsync(int? movieId, string? showDate, int? cinemaId);
+        Task<object> GetSeatsByShowtimeAsync(int showtimeId);
         Task<(bool IsSuccess, string Message, int StatusCode, object? Data)> CreateAsync(CreateShowtimeRequest request);
         Task<(bool IsSuccess, string Message, int StatusCode, object? Data)> UpdateAsync(int id, UpdateShowtimeRequest request);
         Task<(bool IsSuccess, string Message, int StatusCode, object? Data)> CancelAsync(int id);
@@ -84,6 +86,90 @@ namespace RapchieuPhim.API.Services
         public async Task<List<VwShowtimeDetail>> GetDetailAsync()
         {
             return await _context.VwShowtimeDetails.ToListAsync();
+        }
+
+        // 🔓 5b. TìM KIẾM SUẤT CHIẾU (Showtime Search)
+        // Lọc theo: phim, ngày chiếu, rạp
+        public async Task<List<VwShowtimeDetail>> SearchAsync(int? movieId, string? showDate, int? cinemaId)
+        {
+            var query = _context.VwShowtimeDetails
+                .Where(s => s.Status == ShowtimeMessages.StatusActive)
+                .AsQueryable();
+
+            if (movieId.HasValue)
+                query = query.Where(s => s.MovieId == movieId.Value);
+
+            if (!string.IsNullOrWhiteSpace(showDate))
+            {
+                if (!DateOnly.TryParseExact(showDate, "yyyy-MM-dd",
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.None, out var date))
+                    return new List<VwShowtimeDetail>();
+
+                var dayStart = date.ToDateTime(TimeOnly.MinValue);
+                var dayEnd   = date.ToDateTime(TimeOnly.MaxValue);
+                query = query.Where(s => s.StartTime >= dayStart && s.StartTime <= dayEnd);
+            }
+
+            if (cinemaId.HasValue)
+                query = query.Where(s => s.CinemaId == cinemaId.Value);
+
+            return await query.OrderBy(s => s.StartTime).ToListAsync();
+        }
+
+        // 🔓 5c. SƠ ĐỒ GHỪ THEO SUẤT CHIẾU (Seat Selection)
+        // Trả về toàn bộ ghế của phòng + trạng thái: Available | Booked | Held
+        public async Task<object> GetSeatsByShowtimeAsync(int showtimeId)
+        {
+            var showtime = await _context.Showtimes
+                .Include(s => s.Room)
+                .FirstOrDefaultAsync(s => s.ShowTimeId == showtimeId);
+
+            if (showtime == null)
+                return new { Error = ShowtimeMessages.NotFoundWithId(showtimeId) };
+
+            // Lấy tất cả ghế của phòng (active)
+            var seats = await _context.Seats
+                .Where(s => s.RoomId == showtime.RoomId && s.IsActive)
+                .OrderBy(s => s.SeatRow)
+                .ThenBy(s => s.SeatNumber)
+                .ToListAsync();
+
+            // Lấy danh sách SeatId đã đặt thành công cho suất này
+            var bookedSeatIds = await _context.Bookings
+                .Where(b => b.ShowTimeId == showtimeId &&
+                            b.Status != "Cancelled")
+                .Select(b => b.SeatId)
+                .ToListAsync();
+
+            // Nhóm ghế theo hàng, gắn trạng thái
+            var layout = seats
+                .GroupBy(s => s.SeatRow.Trim())
+                .OrderBy(g => g.Key)
+                .Select(g => new
+                {
+                    Row = g.Key,
+                    Seats = g.Select(s => new
+                    {
+                        s.SeatId,
+                        s.SeatNumber,
+                        s.SeatType,
+                        SeatStatus = bookedSeatIds.Contains(s.SeatId) ? "Booked" : "Available"
+                    })
+                });
+
+            return new
+            {
+                ShowTimeId   = showtimeId,
+                RoomId       = showtime.RoomId,
+                RoomName     = showtime.Room.RoomName,
+                StartTime    = showtime.StartTime,
+                EndTime      = showtime.EndTime,
+                BasePrice    = showtime.BasePrice,
+                TotalSeats   = seats.Count,
+                BookedSeats  = bookedSeatIds.Count,
+                Layout       = layout
+            };
         }
 
         // 👑 6. TẠO SUẤT CHIẾU MỚI

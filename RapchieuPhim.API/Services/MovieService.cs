@@ -13,6 +13,7 @@ namespace RapchieuPhim.API.Services
         Task<List<Movie>> GetNowShowingAsync();
         Task<List<Movie>> GetComingSoonAsync();
         Task<List<Movie>> GetSpecialAsync();
+        Task<List<object>> GetWithShowtimesAsync();
         Task<(bool IsSuccess, string Message, int StatusCode, object? Data)> CreateAsync(CreateMovieRequest request, int createdByUserId);
         Task<(bool IsSuccess, string Message, int StatusCode, object? Data)> UpdateAsync(int id, UpdateMovieRequest request);
         Task<(bool IsSuccess, string Message, int StatusCode, object? Data)> DeleteAsync(int id, string currentOperatorEmail);
@@ -168,6 +169,69 @@ namespace RapchieuPhim.API.Services
             await _context.SaveChangesAsync();
 
             return (true, "Đã xóa phim thành công khỏi hệ thống!", 200, null);
+        }
+
+        // 🔓 7. DANH SÁCH PHIM KÈM SUẤT CHIẾU KHẢ DỤNG (Movie Catalog)
+        public async Task<List<object>> GetWithShowtimesAsync()
+        {
+            var now = DateTime.Now;
+
+            // Tách thành query riêng để tránh lỗi MARS (Multiple Active Result Sets)
+            // Query 1: Phim
+            var movies = await _context.Movies
+                .Where(m => m.Status != "Deleted" && m.Status != "Archived")
+                .OrderBy(m => m.Title)
+                .ToListAsync();
+
+            var movieIds = movies.Select(m => m.MovieId).ToList();
+
+            // Query 2: Suất chiếu sắp tới của các phim trên
+            var showtimes = await _context.Showtimes
+                .Where(s => movieIds.Contains(s.MovieId)
+                         && s.Status == ShowtimeMessages.StatusActive
+                         && s.StartTime >= now)
+                .OrderBy(s => s.StartTime)
+                .ToListAsync();
+
+            // Query 3: Thể loại — dùng bảng junction qua EF
+            // Movie.Categories là ICollection<Moviecategory> (many-to-many)
+            var movieWithCats = await _context.Movies
+                .Where(m => movieIds.Contains(m.MovieId))
+                .Select(m => new
+                {
+                    m.MovieId,
+                    CategoryNames = m.Categories.Select(c => c.CategoryName)
+                })
+                .ToListAsync();
+
+            var categoryMap = movieWithCats.ToDictionary(x => x.MovieId, x => x.CategoryNames);
+
+            // Ghép trong bộ nhớ
+            var result = movies.Select(m => (object)new
+            {
+                m.MovieId,
+                m.Title,
+                m.Duration,
+                m.AgeRating,
+                m.PosterUrl,
+                m.TrailerUrl,
+                m.Status,
+                m.ReleaseDate,
+                m.EndDate,
+                Categories = categoryMap.TryGetValue(m.MovieId, out var cats) ? cats : Enumerable.Empty<string>(),
+                UpcomingShowtimes = showtimes
+                    .Where(s => s.MovieId == m.MovieId)
+                    .Select(s => new
+                    {
+                        s.ShowTimeId,
+                        s.RoomId,
+                        s.StartTime,
+                        s.EndTime,
+                        s.BasePrice
+                    })
+            }).ToList();
+
+            return result;
         }
     }
 }

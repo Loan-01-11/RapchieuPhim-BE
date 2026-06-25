@@ -69,6 +69,29 @@ namespace RapchieuPhim.API.Controllers
             return Ok(detail);
         }
 
+        // 🔓 5b. TìM KIẾM LỊCH CHIẾU (CÔNG KHAI)
+        // GET: api/Showtimes/Search?movieId=1&showDate=2026-07-01&cinemaId=1
+        [HttpGet("Search")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Search(
+            [FromQuery] int? movieId,
+            [FromQuery] string? showDate,
+            [FromQuery] int? cinemaId)
+        {
+            var results = await _showtimeService.SearchAsync(movieId, showDate, cinemaId);
+            return Ok(results);
+        }
+
+        // 🔓 5c. SƠ ĐỒ GHỪ THEO SUẤT CHIẾU (CÔNG KHAI)
+        // GET: api/Showtimes/{id}/Seats
+        [HttpGet("{id}/Seats")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetSeats(int id)
+        {
+            var result = await _showtimeService.GetSeatsByShowtimeAsync(id);
+            return Ok(result);
+        }
+
         // 👑 6. TẠO SUẤT CHIẾU MỚI (CHỈ ADMIN)
         // POST: api/Showtimes
         [HttpPost]

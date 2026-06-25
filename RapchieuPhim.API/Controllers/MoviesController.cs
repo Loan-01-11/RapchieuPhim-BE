@@ -82,6 +82,16 @@ namespace RapchieuPhim.API.Controllers
             return Ok(movies);
         }
 
+        // 🔓 3e. DANH SÁCH PHIM KÈM SUẤT CHIẾU KHẢ DỤNG (CATALOG - CÔNG KHAI)
+        // GET: api/Movies/WithShowtimes
+        [HttpGet("WithShowtimes")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetWithShowtimes()
+        {
+            var result = await _movieService.GetWithShowtimesAsync();
+            return Ok(result);
+        }
+
         // 👑 4. THÊM PHIM MỚI (CHỈ ADMIN)
         // POST: api/Movies
         [HttpPost]
