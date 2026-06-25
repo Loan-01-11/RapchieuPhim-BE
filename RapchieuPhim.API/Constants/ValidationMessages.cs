@@ -265,6 +265,29 @@ namespace RapchieuPhim.API.Constants
         // Trạng thái phim không được phép tạo suất chiếu mới
         public static readonly string[] InactiveMovieStatuses = { "Deleted", "Archived" };
 
+        // Trạng thái ghế trong sơ đồ chọn ghế
+        public const string SeatStatusAvailable = "Available";
+        public const string SeatStatusBooked    = "Booked";
+        public const string SeatStatusHeld      = "Held";
+
         public static string NotFoundWithId(int id) => $"Không tìm thấy suất chiếu có ID: {id}.";
+    }
+
+    // ── Hằng số dành riêng cho phân hệ Giữ Ghế Tạm Thời (Seat Hold) ────────────
+    public static class SeatHoldMessages
+    {
+        // Thành công
+        public static string HoldSuccess(int minutes, string until)
+            => $"Đã giữ ghế thành công trong {minutes} phút (đến {until}).";
+        public const string ReleaseSuccess      = "Đã huỷ giữ ghế thành công.";
+
+        // Lỗi giữ ghế
+        public const string AlreadyHeldBySelf   = "Bạn đã giữ ghế này rồi.";
+        public static string HeldByOther(string until)
+            => $"Ghế này đang được người khác giữ đến {until}.";
+
+        // Lỗi huỷ
+        public const string HoldNotFound        = "Không tìm thấy lần giữ ghế này hoặc đã hết hạn.";
+        public const string UnauthorizedRelease = "Bạn không có quyền huỷ giữ ghế của người khác.";
     }
 }

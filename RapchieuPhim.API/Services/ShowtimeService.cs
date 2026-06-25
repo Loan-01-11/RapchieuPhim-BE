@@ -138,7 +138,7 @@ namespace RapchieuPhim.API.Services
             // Lấy danh sách SeatId đã đặt thành công cho suất này
             var bookedSeatIds = await _context.Bookings
                 .Where(b => b.ShowTimeId == showtimeId &&
-                            b.Status != "Cancelled")
+                            b.Status != ShowtimeMessages.StatusCancelled)
                 .Select(b => b.SeatId)
                 .ToListAsync();
 
@@ -154,7 +154,9 @@ namespace RapchieuPhim.API.Services
                         s.SeatId,
                         s.SeatNumber,
                         s.SeatType,
-                        SeatStatus = bookedSeatIds.Contains(s.SeatId) ? "Booked" : "Available"
+                        SeatStatus = bookedSeatIds.Contains(s.SeatId)
+                            ? ShowtimeMessages.SeatStatusBooked
+                            : ShowtimeMessages.SeatStatusAvailable
                     })
                 });
 

@@ -179,7 +179,7 @@ namespace RapchieuPhim.API.Services
             // Tách thành query riêng để tránh lỗi MARS (Multiple Active Result Sets)
             // Query 1: Phim
             var movies = await _context.Movies
-                .Where(m => m.Status != "Deleted" && m.Status != "Archived")
+                .Where(m => !ShowtimeMessages.InactiveMovieStatuses.Contains(m.Status))
                 .OrderBy(m => m.Title)
                 .ToListAsync();
 

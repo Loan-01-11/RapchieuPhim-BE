@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Caching.Memory;
+using RapchieuPhim.API.Constants;
 using RapchieuPhim.API.Models;
 
 namespace RapchieuPhim.API.Services
@@ -52,9 +53,9 @@ namespace RapchieuPhim.API.Services
             if (_cache.TryGetValue(seatKey, out SeatHoldInfo? existing))
             {
                 if (existing!.UserId == userId)
-                    return (false, "Bạn đã giữ ghế này rồi.", null);
+                    return (false, SeatHoldMessages.AlreadyHeldBySelf, null);
 
-                return (false, $"Ghế này đang được người khác giữ đến {existing.HeldUntil:HH:mm:ss}.", null);
+                return (false, SeatHoldMessages.HeldByOther(existing.HeldUntil.ToString("HH:mm:ss")), null);
             }
 
             var holdKey  = NewHoldKey(showTimeId, seatId);
@@ -71,7 +72,7 @@ namespace RapchieuPhim.API.Services
             // Lưu theo holdKey (để client release)
             _cache.Set($"{HoldPrefix}key:{holdKey}", holdInfo, options);
 
-            return (true, $"Đã giữ ghế thành công trong {HoldMinutes} phút (đến {heldUntil:HH:mm:ss}).", holdKey);
+            return (true, SeatHoldMessages.HoldSuccess(HoldMinutes, heldUntil.ToString("HH:mm:ss")), holdKey);
         }
 
         // 2. HUỶ GIỮ GHẾ
@@ -80,15 +81,15 @@ namespace RapchieuPhim.API.Services
             var fullKey = $"{HoldPrefix}key:{holdKey}";
 
             if (!_cache.TryGetValue(fullKey, out SeatHoldInfo? info))
-                return (false, "Không tìm thấy lần giữ ghế này hoặc đã hết hạn.");
+                return (false, SeatHoldMessages.HoldNotFound);
 
             if (info!.UserId != userId)
-                return (false, "Bạn không có quyền huỷ giữ ghế của người khác.");
+                return (false, SeatHoldMessages.UnauthorizedRelease);
 
             _cache.Remove(fullKey);
             _cache.Remove(SeatKey(info.ShowTimeId, info.SeatId));
 
-            return (true, "Đã huỷ giữ ghế thành công.");
+            return (true, SeatHoldMessages.ReleaseSuccess);
         }
 
         // 3. KIỂM TRA GHẾ CÓ ĐANG BỊ GIỮ KHÔNG
