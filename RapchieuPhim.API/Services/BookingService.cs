@@ -131,7 +131,7 @@ namespace RapchieuPhim.API.Services
                 }).ToListAsync();
         }
 
-        // 🌟 THẦN CHÚ CAO CẤP: Gọi Stored Procedure SP_BOOK_TICKET để tránh lỗi tranh chấp ghế ngồi
+        //  Gọi Stored Procedure SP_BOOK_TICKET để tránh lỗi tranh chấp ghế ngồi
         public async Task<(bool IsSuccess, string Message, int BookingId)> CreateBookingAsync(BookingCreateRequest request, int currentUserId, string currentRole)
         {
             int finalUserId = currentUserId;
@@ -174,7 +174,7 @@ namespace RapchieuPhim.API.Services
             if (resultBookingId == 0)
                 return (false, resultMessage, 0);
 
-            return (true, resultMessage, resultBookingId);
+            return (true, ValidationMessages.CreateBookingSuccess, resultBookingId);
         }
 
         //   Gọi Stored Procedure SP_CANCEL_BOOKING để hoàn trả ghế trống và hủy vé tự động
@@ -188,16 +188,11 @@ namespace RapchieuPhim.API.Services
             if (currentRole == "Customer" && booking.UserId != currentUserId)
                 return (false, ValidationMessages.UnauthorizedBookingCancel);
 
-            var pBookingId = new SqlParameter("@BookingId", bookingId);
-            var pMessage = new SqlParameter("@Message", SqlDbType.NVarChar, 200) { Direction = ParameterDirection.Output };
+            // 🔥 THAY VÌ GỌI STORED PROCEDURE ĐỂ ĐỔI STATUS -> TA XÓA SỔ HOÀN TOÀN BẢN GHI KHỎI BẢNG BOOKINGS
+            _context.Bookings.Remove(booking);
+            await _context.SaveChangesAsync(); // Ép SQL Server thực thi lệnh DELETE lệnh vật lý
 
-            await _context.Database.ExecuteSqlRawAsync("EXEC SP_CANCEL_BOOKING @BookingId, @Message OUTPUT", pBookingId, pMessage);
-
-            string resultMessage = pMessage.Value.ToString() ?? "Hủy thất bại.";
-            if (resultMessage.Contains("successfully"))
-                return (true, "Hủy đơn đặt vé thành công!");
-
-            return (false, resultMessage);
+            return (true, ValidationMessages.CancelBookingSuccess);
         }
     }
 }
