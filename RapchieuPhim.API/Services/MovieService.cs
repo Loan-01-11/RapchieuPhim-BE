@@ -58,7 +58,7 @@ namespace RapchieuPhim.API.Services
             var today = DateOnly.FromDateTime(DateTime.Now);
             return await _context.Movies
                 .Include(m => m.Categories)
-                .Where(m => m.Status == MovieStatus.NowShowing && m.ReleaseDate <= today && m.EndDate >= today) // 🌟 Dùng hằng số
+                .Where(m => m.Status == MovieStatus.NowShowing && m.ReleaseDate <= today && m.EndDate >= today) 
                 .ToListAsync();
         }
 
@@ -67,7 +67,7 @@ namespace RapchieuPhim.API.Services
         {
             return await _context.Movies
                 .Include(m => m.Categories)
-                .Where(m => m.Status == MovieStatus.ComingSoon) // 🌟 Dùng hằng số
+                .Where(m => m.Status == MovieStatus.ComingSoon) 
                 .ToListAsync();
         }
 

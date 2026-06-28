@@ -88,6 +88,7 @@ namespace RapchieuPhim.API.Controllers
         [Authorize(Roles = RoleConstants.Admin)]
         public async Task<IActionResult> Create([FromBody] CreateMovieRequest request)
         {
+            //Nếu dữ liệu Frontend gửi lên vi phạm các điều kiện ràng buộc trong file Request DTO, hệ thống chặn lại và trả về lỗi 400 Bad Request kèm lý do cụ thể.
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
