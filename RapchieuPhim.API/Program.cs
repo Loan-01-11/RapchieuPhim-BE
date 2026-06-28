@@ -153,17 +153,15 @@ using (var scope = app.Services.CreateScope()) // 1. Mở một không gian cô 
         // 4. Nếu CHƯA CÓ tài khoản Admin nào, tiến hành tạo mới
         if (!hasAdmin)
         {
-            var adminEmail = builder.Configuration["SeedData:AdminEmail"] ?? "admin@123.com";
-            var adminPassword = builder.Configuration["SeedData:AdminPassword"] ?? "";
+
             var defaultAdmin = new User
             {
                 FullName = "Hệ Thống Admin",
-                Email = adminEmail,
-                // 🌟 Băm mật khẩu động vừa bốc được chứ không điền chữ thô nữa
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(adminPassword),
+                Email = "admin@123.com", // 📧 Dùng tài khoản này đăng nhập
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"), // 🔑 Mật khẩu đã băm bảo mật
                 Phone = "0123456789",
                 DateOfBirth = new DateOnly(2000, 1, 1),
-                Role = "Admin",
+                Role = "Admin", // Chuỗi chữ gán quyền
                 RewardPoint = 0,
                 IsActive = true,
                 CreatedAt = DateTime.Now

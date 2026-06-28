@@ -1,21 +1,18 @@
 {
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=TÊN_MÁY_BẠN;Database=CinemaManagement;User Id=sa;Password=MẬT_KHẨU_SQL;TrustServerCertificate=True;"
-  },
-  "Jwt": {
-    "Key": "CinemaManagement_SuperSecretKey_2024_ChangeThisInProduction!"
-  },
-  "Google": {
-    "ClientId": "LẤY_TỪ_NHÓM_TRƯỞNG",
-    "ClientSecret": "LẤY_TỪ_NHÓM_TRƯỞNG"
-  },
-  "Email": {
-    "SenderEmail": "EMAIL_CỦA_BẠN@fpt.edu.vn",
-    "AppPassword": "LẤY_TỪ_NHÓM_TRƯỞNG"
-  },
+    "ConnectionStrings": {
+        "DefaultConnection": "Server=TÊN_MÁY_BẠN;Database=CinemaManagement;User Id=sa;Password=MẬT_KHẨU_SQL;TrustServerCertificate=True;"
+    },
+    "Jwt": {
+        "Key": "CinemaManagement_SuperSecretKey_2024_ChangeThisInProduction!"
+    },
+    "Google": {
+        "ClientId": "LẤY_TỪ_NHÓM_TRƯỞNG",
+        "ClientSecret": "LẤY_TỪ_NHÓM_TRƯỞNG"
+    },
+    "Email": {
+        "SenderEmail": "EMAIL_CỦA_BẠN@fpt.edu.vn",
+        "AppPassword": "LẤY_TỪ_NHÓM_TRƯỞNG"
+    }
 
-  "SeedData": {
-    "AdminEmail": "admin@123.com",
-    "AdminPassword": "admin123"
-  }
+
 }
