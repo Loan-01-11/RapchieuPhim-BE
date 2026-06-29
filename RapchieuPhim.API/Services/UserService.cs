@@ -126,6 +126,7 @@ namespace RapchieuPhim.API.Services
             targetUser.DateOfBirth = dob;
             targetUser.Gender = string.IsNullOrWhiteSpace(request.Gender) ? null : request.Gender.Trim();
             targetUser.Role = newRole;
+            targetUser.IsActive = request.IsActive;
 
             await _context.SaveChangesAsync();
             return (true, ValidationMessages.UserUpdateSuccessWithId(id), 200);
@@ -150,13 +151,18 @@ namespace RapchieuPhim.API.Services
         public async Task<List<UserResponse>> GetByRoleAsync(string role)
         {
             return await _context.Users
-                .Where(u => u.Role == role && u.IsActive)
+                .Where(u => u.Role == role)
                 .Select(u => new UserResponse
                 {
                     UserId = u.UserId,
                     FullName = u.FullName,
                     Email = u.Email,
-                    Role = u.Role
+                    Phone = u.Phone,
+                    Role = u.Role,
+                    IsActive = u.IsActive,
+                    CreatedAt = u.CreatedAt,
+                    DateOfBirth = u.DateOfBirth,
+                    Gender = u.Gender
                 }).ToListAsync();
         }
     }

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RapchieuPhim.API.Constants;
 using RapchieuPhim.API.DTOs.DTORequest;
 using RapchieuPhim.API.DTOs.DTOResponse;
@@ -27,11 +27,14 @@ namespace RapchieuPhim.API.Services
         }
 
         /// <summary>
-        /// Lấy toàn bộ danh sách vé trong hệ thống (Dành cho Admin quản lý)
+        /// L?y ton b? danh sch v trong h? th?ng (Dnh cho Admin qu?n ly)
         /// </summary>
         public async Task<List<TicketResponse>> GetAllAsync()
         {
             return await _context.Tickets
+                .Include(t => t.Booking).ThenInclude(b => b.User)
+                .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Movie)
+                .Include(t => t.Booking).ThenInclude(b => b.Seat)
                 .Select(t => new TicketResponse
                 {
                     TicketId = t.TicketId,
@@ -40,16 +43,22 @@ namespace RapchieuPhim.API.Services
                     QrCodeUrl = t.QrCodeUrl,
                     Price = t.Price,
                     IssuedAt = t.IssuedAt,
-                    Status = t.Status
+                    Status = t.Status,
+                    CustomerName = t.Booking.User != null ? t.Booking.User.FullName : "Khách vãng lai",
+                    MovieTitle = t.Booking.ShowTime.Movie != null ? t.Booking.ShowTime.Movie.Title : "N/A",
+                    SeatCode = t.Booking.Seat != null ? (t.Booking.Seat.SeatRow + t.Booking.Seat.SeatNumber) : "N/A"
                 }).ToListAsync();
         }
 
         /// <summary>
-        /// Tìm chi tiết vé dựa theo ID vé
+        /// Tm chi ti?t v d?a theo ID v
         /// </summary>
         public async Task<TicketResponse?> GetByIdAsync(int id)
         {
             return await _context.Tickets
+                .Include(t => t.Booking).ThenInclude(b => b.User)
+                .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Movie)
+                .Include(t => t.Booking).ThenInclude(b => b.Seat)
                 .Where(t => t.TicketId == id)
                 .Select(t => new TicketResponse
                 {
@@ -59,17 +68,23 @@ namespace RapchieuPhim.API.Services
                     QrCodeUrl = t.QrCodeUrl,
                     Price = t.Price,
                     IssuedAt = t.IssuedAt,
-                    Status = t.Status
+                    Status = t.Status,
+                    CustomerName = t.Booking.User != null ? t.Booking.User.FullName : "Khách vãng lai",
+                    MovieTitle = t.Booking.ShowTime.Movie != null ? t.Booking.ShowTime.Movie.Title : "N/A",
+                    SeatCode = t.Booking.Seat != null ? (t.Booking.Seat.SeatRow + t.Booking.Seat.SeatNumber) : "N/A"
                 }).FirstOrDefaultAsync();
         }
 
         /// <summary>
-        /// Dò tìm vé theo mã Code (Cực kỳ quan trọng để nhân viên quét QR Code tại cửa rạp)
+        /// D tm v theo ma Code (C?c k? quan tr?ng d? nhn vin qut QR Code t?i c?a r?p)
         /// </summary>
         public async Task<TicketResponse?> GetByCodeAsync(string ticketCode)
         {
             var cleanCode = ticketCode.Trim();
             return await _context.Tickets
+                .Include(t => t.Booking).ThenInclude(b => b.User)
+                .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Movie)
+                .Include(t => t.Booking).ThenInclude(b => b.Seat)
                 .Where(t => t.TicketCode == cleanCode)
                 .Select(t => new TicketResponse
                 {
@@ -79,16 +94,22 @@ namespace RapchieuPhim.API.Services
                     QrCodeUrl = t.QrCodeUrl,
                     Price = t.Price,
                     IssuedAt = t.IssuedAt,
-                    Status = t.Status
+                    Status = t.Status,
+                    CustomerName = t.Booking.User != null ? t.Booking.User.FullName : "Khách vãng lai",
+                    MovieTitle = t.Booking.ShowTime.Movie != null ? t.Booking.ShowTime.Movie.Title : "N/A",
+                    SeatCode = t.Booking.Seat != null ? (t.Booking.Seat.SeatRow + t.Booking.Seat.SeatNumber) : "N/A"
                 }).FirstOrDefaultAsync();
         }
 
         /// <summary>
-        /// Lấy danh sách vé thuộc về một đơn đặt vé cụ thể
+        /// L?y danh sch v thu?c v? m?t don d?t v c? th?
         /// </summary>
         public async Task<List<TicketResponse>> GetByBookingAsync(int bookingId)
         {
             return await _context.Tickets
+                .Include(t => t.Booking).ThenInclude(b => b.User)
+                .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Movie)
+                .Include(t => t.Booking).ThenInclude(b => b.Seat)
                 .Where(t => t.BookingId == bookingId)
                 .Select(t => new TicketResponse
                 {
@@ -98,36 +119,46 @@ namespace RapchieuPhim.API.Services
                     QrCodeUrl = t.QrCodeUrl,
                     Price = t.Price,
                     IssuedAt = t.IssuedAt,
-                    Status = t.Status
+                    Status = t.Status,
+                    CustomerName = t.Booking.User != null ? t.Booking.User.FullName : "Khách vãng lai",
+                    MovieTitle = t.Booking.ShowTime.Movie != null ? t.Booking.ShowTime.Movie.Title : "N/A",
+                    SeatCode = t.Booking.Seat != null ? (t.Booking.Seat.SeatRow + t.Booking.Seat.SeatNumber) : "N/A"
                 }).ToListAsync();
         }
 
         /// <summary>
-        /// Tạo mới một bản ghi vé xem phim thực tế
+        /// T?o m?i m?t b?n ghi v xem phim th?c t?
         /// </summary>
         public async Task<TicketResponse> CreateAsync(TicketCreateRequest request)
         {
-            // 🌟 1. TỰ ĐỘNG SINH TICKET CODE (Dài 10 ký tự, không bao giờ trùng)
-            // Guid sinh ra chuỗi dạng: 74b88612-4293-47e2... Ta cắt lấy 7 ký tự đầu ghép với chữ TIC
+            // ?? 1. T? D?NG SINH TICKET CODE (Di 10 ky t?, khng bao gi? trng)
+            // Guid sinh ra chu?i d?ng: 74b88612-4293-47e2... Ta c?t l?y 7 ky t? d?u ghp v?i ch? TIC
             string autoTicketCode = "TIC" + Guid.NewGuid().ToString().Replace("-", "").Substring(0, 7).ToUpper();
 
-            // 🌟 2. TỰ ĐỘNG SINH QR CODE URL
-            // Sử dụng API tạo mã QR công cộng miễn phí (Chỉ cần truyền data vào là nó tự vẽ thành ảnh QR)
-            // Khi quét cái ảnh QR này, máy quét sẽ đọc ra đúng chuỗi autoTicketCode ở trên
+            // ?? 2. T? D?NG SINH QR CODE URL
+            // S? d?ng API t?o ma QR cng c?ng mi?n ph (Ch? c?n truy?n data vo l n t? v? thnh ?nh QR)
+            // Khi qut ci ?nh QR ny, my qut s? d?c ra dng chu?i autoTicketCode ? trn
             string autoQrCodeUrl = $"https://api.qrserver.com/v1/create-qr-code/?size=250x250&data={autoTicketCode}";
 
             var ticket = new Ticket
             {
                 BookingId = request.BookingId,
-                TicketCode = autoTicketCode, // Nạp mã tự sinh xuống DB
-                QrCodeUrl = autoQrCodeUrl,   // Nạp link ảnh QR tự sinh xuống DB
+                TicketCode = autoTicketCode, // N?p ma t? sinh xu?ng DB
+                QrCodeUrl = autoQrCodeUrl,   // N?p link ?nh QR t? sinh xu?ng DB
                 Price = request.Price,
-                IssuedAt = DateTime.Now, // Ghi nhận thời gian xuất vé hiện tại
-                Status = "Active"       // Trạng thái mặc định ban đầu là hoạt động
+                IssuedAt = DateTime.Now, // Ghi nh?n th?i gian xu?t v hi?n t?i
+                Status = "Active"       // Tr?ng thi m?c d?nh ban d?u l ho?t d?ng
             };
 
             _context.Tickets.Add(ticket);
             await _context.SaveChangesAsync();
+
+            // Fetch relations for DTO
+            var created = await _context.Tickets
+                .Include(t => t.Booking).ThenInclude(b => b.User)
+                .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Movie)
+                .Include(t => t.Booking).ThenInclude(b => b.Seat)
+                .FirstOrDefaultAsync(t => t.TicketId == ticket.TicketId);
 
             return new TicketResponse
             {
@@ -137,12 +168,15 @@ namespace RapchieuPhim.API.Services
                 QrCodeUrl = ticket.QrCodeUrl,
                 Price = ticket.Price,
                 IssuedAt = ticket.IssuedAt,
-                Status = ticket.Status
+                Status = ticket.Status,
+                CustomerName = created?.Booking?.User?.FullName ?? "Khách vãng lai",
+                MovieTitle = created?.Booking?.ShowTime?.Movie?.Title ?? "N/A",
+                SeatCode = created?.Booking?.Seat != null ? (created.Booking.Seat.SeatRow + created.Booking.Seat.SeatNumber) : "N/A"
             };
         }
 
         /// <summary>
-        /// Cập nhật trạng thái vé (Sử dụng khi soát vé tại cửa rạp: Active -> Used)
+        /// C?p nh?t tr?ng thi v (S? d?ng khi sot v t?i c?a r?p: Active -> Used)
         /// </summary>
         public async Task<(bool IsSuccess, string Message, int StatusCode)> UpdateStatusAsync(int id, TicketStatusRequest request)
         {
@@ -152,7 +186,7 @@ namespace RapchieuPhim.API.Services
 
             var newStatus = request.Status.Trim();
 
-            // Chốt chặn danh sách trắng: Ngăn chặn việc truyền trạng thái bậy bạ phá hoại dữ liệu
+            // Ch?t ch?n danh sch tr?ng: Ngan ch?n vi?c truy?n tr?ng thi b?y b? ph ho?i d? li?u
             var validStatuses = new[] { "Active", "Used", "Cancelled" };
             if (!validStatuses.Contains(newStatus))
                 return (false, ValidationMessages.TicketStatusInvalid, 400);

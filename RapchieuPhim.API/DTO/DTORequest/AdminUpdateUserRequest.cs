@@ -8,5 +8,6 @@ namespace RapchieuPhim.API.DTO.DTORequest
         public string? Gender { get; set; }
         public string Role { get; set; } = null!;
         public string Email { get; set; } = null!;
+        public bool IsActive { get; set; }
     }
 }
