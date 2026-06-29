@@ -187,7 +187,8 @@ namespace RapchieuPhim.API.Constants
         public const string BookingConcurrencyError = "Dữ liệu đơn đặt vé đã bị thay đổi bởi một luồng khác, vui lòng thử lại.";
         public const string UnauthorizedBookingView = "Bạn không có quyền xem lịch sử đặt vé của tài khoản này.";
         public const string UnauthorizedBookingCancel = "Bạn không có quyền hủy đơn đặt vé này.";
-
+        public const string CancelBookingSuccess = "Hủy đơn đặt vé và giải phóng ghế thành công!";
+        public const string CreateBookingSuccess = "Đặt vé xem phim thành công!";
         // --- CÁC HÀM TRẢ VỀ THÔNG BÁO CHỨA BIẾN ĐỘNG ĐỘNG ---
         public static string BookingNotFoundWithId(int id) => $"Không tìm thấy đơn đặt vé có ID = {id}.";
 

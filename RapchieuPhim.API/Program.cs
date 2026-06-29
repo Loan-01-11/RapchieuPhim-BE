@@ -156,6 +156,7 @@ using (var scope = app.Services.CreateScope()) // 1. Mở một không gian cô 
         // 4. Nếu CHƯA CÓ tài khoản Admin nào, tiến hành tạo mới
         if (!hasAdmin)
         {
+
             var defaultAdmin = new User
             {
                 FullName = "Hệ Thống Admin",
@@ -169,7 +170,7 @@ using (var scope = app.Services.CreateScope()) // 1. Mở một không gian cô 
                 CreatedAt = DateTime.Now
             };
 
-            context.Users.Add(defaultAdmin); // Thêm vào giỏ
+            context.Users.Add(defaultAdmin); // Thêm vào 
             await context.SaveChangesAsync(); // Chốt lưu xuống SQL Server
 
             // In một dòng chữ màu xanh ra màn hình đen (Console) để báo hiệu cho bạn biết

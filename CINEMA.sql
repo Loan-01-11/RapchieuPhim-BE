@@ -712,16 +712,16 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @Exists       INT;
-    DECLARE @BasePrice    DECIMAL(12,2);
-    DECLARE @DiscountId   INT           = NULL;
-    DECLARE @DiscountAmt  DECIMAL(12,2) = 0;
+    DECLARE @Exists        INT;
+    DECLARE @BasePrice     DECIMAL(12,2) = 0;
+    DECLARE @DiscountId    INT           = NULL;
+    DECLARE @DiscountAmt   DECIMAL(12,2) = 0;
     DECLARE @DiscountType NVARCHAR(20);
-    DECLARE @DiscountVal  DECIMAL(12,2);
-    DECLARE @UsedCount    INT;
-    DECLARE @MaxPerUser   INT;
+    DECLARE @DiscountVal   DECIMAL(12,2);
+    DECLARE @UsedCount     INT;
+    DECLARE @MaxPerUser    INT;
 
-    -- Check seat availability
+    -- 1. Kiểm tra xem ghế đã có ai đặt chưa
     SELECT @Exists = COUNT(*)
     FROM BOOKINGS
     WHERE ShowTimeId = @ShowTimeId
@@ -735,7 +735,37 @@ BEGIN
         RETURN;
     END
 
-    SELECT @BasePrice = BasePrice FROM SHOWTIMES WHERE ShowTimeId = @ShowTimeId;
+    -- ===================================================================
+    -- 🌟 KHÚC NÂNG CẤP: TỰ ĐỘNG TRA BẢNG TICKETPRICING ĐỂ LẤY GIÁ THEO LOẠI GHẾ
+    -- ===================================================================
+    DECLARE @RoomType NVARCHAR(50);
+    DECLARE @SeatType NVARCHAR(30);
+
+    -- Lấy RoomType của phòng chiếu thuộc suất chiếu này
+    SELECT @RoomType = r.RoomType 
+    FROM SHOWTIMES st
+    JOIN ROOMS r ON st.RoomId = r.RoomId
+    WHERE st.ShowTimeId = @ShowTimeId;
+
+    -- Lấy SeatType của chiếc ghế khách chọn
+    SELECT @SeatType = SeatType 
+    FROM SEATS 
+    WHERE SeatId = @SeatId;
+
+    -- Tiến hành lục tìm trong bảng ma trận giá TICKETPRICING
+    SELECT TOP 1 @BasePrice = Price 
+    FROM TICKETPRICING 
+    WHERE (RoomType = @RoomType OR RoomType IS NULL)
+      AND (SeatType = @SeatType OR SeatType IS NULL)
+      AND IsActive = 1
+    ORDER BY PricingId DESC;
+
+    -- BẪY DỰ PHÒNG: Nếu bảng TICKETPRICING chưa được cấu hình, thì mới lấy tạm BasePrice của SHOWTIMES
+    IF @BasePrice IS NULL OR @BasePrice = 0
+    BEGIN
+        SELECT @BasePrice = BasePrice FROM SHOWTIMES WHERE ShowTimeId = @ShowTimeId;
+    END
+    -- ===================================================================
 
     -- Apply discount if code provided
     IF @DiscountCode IS NOT NULL AND @DiscountCode <> ''
