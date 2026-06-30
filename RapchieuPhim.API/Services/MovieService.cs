@@ -171,13 +171,17 @@ namespace RapchieuPhim.API.Services
             return (true, ValidationMessages.DeleteMovieSuccess, 200, null);
         }
 
+        // ─────────────────────────────────────────────────────────────────────
         // 🔓 7. DANH SÁCH PHIM KÈM SUẤT CHIẾU KHẢ DỤNG (Movie Catalog)
+        // Trả về tất cả phim đang hoạt động kèm suất chiếu sắp tới và thể loại.
+        // Tách thành 3 query riêng biệt để tránh lỗi MARS (Multiple Active Result Sets)
+        // xảy ra khi dùng nhiều .Include() trên cùng một connection SQL Server.
+        // ─────────────────────────────────────────────────────────────────────
         public async Task<List<object>> GetWithShowtimesAsync()
         {
             var now = DateTime.Now;
 
-            // Tách thành query riêng để tránh lỗi MARS (Multiple Active Result Sets)
-            // Query 1: Phim
+            // Query 1: Lấy danh sách phim đang hoạt động (bỏ Deleted + Archived)
             var movies = await _context.Movies
                 .Where(m => !ShowtimeMessages.InactiveMovieStatuses.Contains(m.Status))
                 .OrderBy(m => m.Title)
@@ -185,7 +189,7 @@ namespace RapchieuPhim.API.Services
 
             var movieIds = movies.Select(m => m.MovieId).ToList();
 
-            // Query 2: Suất chiếu sắp tới của các phim trên
+            // Query 2: Lấy suất chiếu Active có giờ chiếu từ hiện tại trở đi
             var showtimes = await _context.Showtimes
                 .Where(s => movieIds.Contains(s.MovieId)
                          && s.Status == ShowtimeMessages.StatusActive
@@ -193,8 +197,8 @@ namespace RapchieuPhim.API.Services
                 .OrderBy(s => s.StartTime)
                 .ToListAsync();
 
-            // Query 3: Thể loại — dùng bảng junction qua EF
-            // Movie.Categories là ICollection<Moviecategory> (many-to-many)
+            // Query 3: Lấy thể loại của từng phim qua bảng junction (many-to-many)
+            // Dùng projection thay vì Include để tránh MARS
             var movieWithCats = await _context.Movies
                 .Where(m => movieIds.Contains(m.MovieId))
                 .Select(m => new
@@ -204,9 +208,10 @@ namespace RapchieuPhim.API.Services
                 })
                 .ToListAsync();
 
+            // Tạo Dictionary để tra cứu thể loại theo MovieId nhanh hơn O(n²)
             var categoryMap = movieWithCats.ToDictionary(x => x.MovieId, x => x.CategoryNames);
 
-            // Ghép trong bộ nhớ
+            // Ghép kết quả trong bộ nhớ (in-memory join)
             var result = movies.Select(m => (object)new
             {
                 m.MovieId,
@@ -218,7 +223,9 @@ namespace RapchieuPhim.API.Services
                 m.Status,
                 m.ReleaseDate,
                 m.EndDate,
+                // Lấy danh sách tên thể loại, trả về rỗng nếu chưa có thể loại nào
                 Categories = categoryMap.TryGetValue(m.MovieId, out var cats) ? cats : Enumerable.Empty<string>(),
+                // Lọc suất chiếu thuộc đúng phim này
                 UpcomingShowtimes = showtimes
                     .Where(s => s.MovieId == m.MovieId)
                     .Select(s => new

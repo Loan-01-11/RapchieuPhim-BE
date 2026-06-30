@@ -33,4 +33,5 @@ packages/
 *.log
 
 ## Secrets – never commit connection strings or keys
+appsettings.Development.json
 appsettings.Development.json.example

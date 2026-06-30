@@ -88,39 +88,59 @@ namespace RapchieuPhim.API.Services
             return await _context.VwShowtimeDetails.ToListAsync();
         }
 
-        // 🔓 5b. TìM KIẾM SUẤT CHIẾU (Showtime Search)
-        // Lọc theo: phim, ngày chiếu, rạp
+        // ─────────────────────────────────────────────────────────────────────
+        // 🔓 5b. TÌM KIẾM SUẤT CHIẾU (Showtime Search)
+        // Hỗ trợ lọc linh hoạt theo nhiều tiêu chí, tất cả đều tuỳ chọn:
+        //   - movieId  : lọc theo phim
+        //   - showDate : lọc theo ngày chiếu (định dạng yyyy-MM-dd)
+        //   - cinemaId : lọc theo rạp
+        // Truy vấn qua View VwShowtimeDetail (đã join sẵn phim + phòng + rạp)
+        // ─────────────────────────────────────────────────────────────────────
         public async Task<List<VwShowtimeDetail>> SearchAsync(int? movieId, string? showDate, int? cinemaId)
         {
+            // Bắt đầu với tất cả suất chiếu đang hoạt động
             var query = _context.VwShowtimeDetails
                 .Where(s => s.Status == ShowtimeMessages.StatusActive)
                 .AsQueryable();
 
+            // Áp dụng lọc theo phim nếu có
             if (movieId.HasValue)
                 query = query.Where(s => s.MovieId == movieId.Value);
 
+            // Áp dụng lọc theo ngày chiếu nếu có
             if (!string.IsNullOrWhiteSpace(showDate))
             {
+                // Validate định dạng ngày – sai format trả về danh sách rỗng thay vì báo lỗi
                 if (!DateOnly.TryParseExact(showDate, "yyyy-MM-dd",
                         System.Globalization.CultureInfo.InvariantCulture,
                         System.Globalization.DateTimeStyles.None, out var date))
                     return new List<VwShowtimeDetail>();
 
-                var dayStart = date.ToDateTime(TimeOnly.MinValue);
-                var dayEnd   = date.ToDateTime(TimeOnly.MaxValue);
+                // Lọc suất chiếu có giờ bắt đầu trong khoảng ngày được chọn
+                var dayStart = date.ToDateTime(TimeOnly.MinValue); // 00:00:00
+                var dayEnd   = date.ToDateTime(TimeOnly.MaxValue); // 23:59:59
                 query = query.Where(s => s.StartTime >= dayStart && s.StartTime <= dayEnd);
             }
 
+            // Áp dụng lọc theo rạp nếu có
             if (cinemaId.HasValue)
                 query = query.Where(s => s.CinemaId == cinemaId.Value);
 
+            // Sắp xếp theo giờ chiếu tăng dần và trả về kết quả
             return await query.OrderBy(s => s.StartTime).ToListAsync();
         }
 
-        // 🔓 5c. SƠ ĐỒ GHỪ THEO SUẤT CHIẾU (Seat Selection)
-        // Trả về toàn bộ ghế của phòng + trạng thái: Available | Booked | Held
+        // ─────────────────────────────────────────────────────────────────────
+        // 🔓 5c. SƠ ĐỒ GHẾ THEO SUẤT CHIẾU (Seat Selection)
+        // Trả về toàn bộ ghế của phòng chiếu + trạng thái từng ghế:
+        //   - Available : ghế trống, có thể đặt
+        //   - Booked    : đã có người đặt thành công (không phải Cancelled)
+        //   - Held      : đang được người khác giữ tạm (5 phút)
+        // Layout ghế được nhóm theo hàng (SeatRow) để FE dễ render sơ đồ 2D
+        // ─────────────────────────────────────────────────────────────────────
         public async Task<object> GetSeatsByShowtimeAsync(int showtimeId)
         {
+            // Lấy thông tin suất chiếu kèm phòng chiếu
             var showtime = await _context.Showtimes
                 .Include(s => s.Room)
                 .FirstOrDefaultAsync(s => s.ShowTimeId == showtimeId);
@@ -128,21 +148,23 @@ namespace RapchieuPhim.API.Services
             if (showtime == null)
                 return new { Error = ShowtimeMessages.NotFoundWithId(showtimeId) };
 
-            // Lấy tất cả ghế của phòng (active)
+            // Lấy tất cả ghế đang hoạt động (IsActive = true) của phòng,
+            // sắp xếp theo hàng rồi theo số ghế để layout đúng thứ tự
             var seats = await _context.Seats
                 .Where(s => s.RoomId == showtime.RoomId && s.IsActive)
                 .OrderBy(s => s.SeatRow)
                 .ThenBy(s => s.SeatNumber)
                 .ToListAsync();
 
-            // Lấy danh sách SeatId đã đặt thành công cho suất này
+            // Lấy danh sách SeatId đã được đặt thành công cho suất chiếu này
+            // Bỏ qua booking bị Cancelled vì ghế đó đã được nhả ra
             var bookedSeatIds = await _context.Bookings
                 .Where(b => b.ShowTimeId == showtimeId &&
                             b.Status != ShowtimeMessages.StatusCancelled)
                 .Select(b => b.SeatId)
                 .ToListAsync();
 
-            // Nhóm ghế theo hàng, gắn trạng thái
+            // Nhóm ghế theo hàng (A, B, C...) và gắn trạng thái cho từng ghế
             var layout = seats
                 .GroupBy(s => s.SeatRow.Trim())
                 .OrderBy(g => g.Key)
@@ -154,6 +176,7 @@ namespace RapchieuPhim.API.Services
                         s.SeatId,
                         s.SeatNumber,
                         s.SeatType,
+                        // Ưu tiên kiểm tra Booked trước, ghế còn lại là Available
                         SeatStatus = bookedSeatIds.Contains(s.SeatId)
                             ? ShowtimeMessages.SeatStatusBooked
                             : ShowtimeMessages.SeatStatusAvailable

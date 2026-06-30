@@ -37,19 +37,29 @@ namespace RapchieuPhim.API.Services
         }
 
         // ── Tạo cache key cho 1 ghế trong 1 suất chiếu ──────────────────────────
+        // Dùng để kiểm tra xung đột nhanh: ai đó đang hold ghế này chưa?
         private static string SeatKey(int showTimeId, int seatId)
             => $"{HoldPrefix}{showTimeId}:{seatId}";
 
-        // ── Tạo holdKey duy nhất cho client ─────────────────────────────────────
+        // ── Tạo holdKey duy nhất trả về cho client sau khi giữ ghế thành công ───
+        // Client dùng holdKey này khi gọi DELETE /Hold để huỷ giữ ghế
         private static string NewHoldKey(int showTimeId, int seatId)
             => $"{showTimeId}_{seatId}_{Guid.NewGuid():N}";
 
-        // 1. GIỮ GHẾ
+        // ─────────────────────────────────────────────────────────────────────
+        // 1. GIỮ GHẾ (HoldSeat)
+        // Chiến lược dual-key cache:
+        //   - seatKey  → lưu theo ghế, dùng để check xung đột nhanh O(1)
+        //   - holdKey  → lưu theo lần giữ, dùng để client release đúng ghế
+        // Cả hai entry đều có cùng AbsoluteExpiration = 5 phút
+        // ─────────────────────────────────────────────────────────────────────
         public (bool IsSuccess, string Message, string? HoldKey) HoldSeat(int userId, int showTimeId, int seatId)
         {
             var seatKey = SeatKey(showTimeId, seatId);
 
             // Kiểm tra ghế đã bị giữ chưa
+            // → nếu chính user này đang giữ → báo đã giữ rồi
+            // → nếu user khác đang giữ → báo ghế đang bận kèm thời hạn hết giữ
             if (_cache.TryGetValue(seatKey, out SeatHoldInfo? existing))
             {
                 if (existing!.UserId == userId)
@@ -58,34 +68,43 @@ namespace RapchieuPhim.API.Services
                 return (false, SeatHoldMessages.HeldByOther(existing.HeldUntil.ToString("HH:mm:ss")), null);
             }
 
-            var holdKey  = NewHoldKey(showTimeId, seatId);
+            var holdKey   = NewHoldKey(showTimeId, seatId);
             var heldUntil = DateTime.Now.AddMinutes(HoldMinutes);
-            var holdInfo = new SeatHoldInfo(userId, showTimeId, seatId, heldUntil);
+            var holdInfo  = new SeatHoldInfo(userId, showTimeId, seatId, heldUntil);
 
+            // Cache tự động xoá sau 5 phút (AbsoluteExpiration)
             var options = new MemoryCacheEntryOptions
             {
                 AbsoluteExpiration = heldUntil
             };
 
-            // Lưu theo seatKey (để kiểm tra xung đột nhanh)
+            // Lưu theo seatKey để kiểm tra xung đột nhanh khi ai khác muốn giữ cùng ghế
             _cache.Set(seatKey, holdInfo, options);
-            // Lưu theo holdKey (để client release)
+            // Lưu theo holdKey để client có thể huỷ giữ ghế trước khi hết 5 phút
             _cache.Set($"{HoldPrefix}key:{holdKey}", holdInfo, options);
 
             return (true, SeatHoldMessages.HoldSuccess(HoldMinutes, heldUntil.ToString("HH:mm:ss")), holdKey);
         }
 
-        // 2. HUỶ GIỮ GHẾ
+        // ─────────────────────────────────────────────────────────────────────
+        // 2. HUỶ GIỮ GHẾ (ReleaseHold)
+        // Client gửi holdKey nhận được từ POST /Hold để huỷ trước khi hết 5 phút.
+        // Chỉ user sở hữu holdKey mới được huỷ — không thể huỷ của người khác.
+        // Sau khi huỷ, xoá cả 2 entry (holdKey + seatKey) khỏi cache.
+        // ─────────────────────────────────────────────────────────────────────
         public (bool IsSuccess, string Message) ReleaseHold(string holdKey, int userId)
         {
             var fullKey = $"{HoldPrefix}key:{holdKey}";
 
+            // Không tìm thấy → đã hết hạn 5 phút hoặc holdKey sai
             if (!_cache.TryGetValue(fullKey, out SeatHoldInfo? info))
                 return (false, SeatHoldMessages.HoldNotFound);
 
+            // Kiểm tra quyền: chỉ đúng chủ nhân mới được huỷ
             if (info!.UserId != userId)
                 return (false, SeatHoldMessages.UnauthorizedRelease);
 
+            // Xoá cả 2 entry để ghế trở về trạng thái Available ngay lập tức
             _cache.Remove(fullKey);
             _cache.Remove(SeatKey(info.ShowTimeId, info.SeatId));
 
