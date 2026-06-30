@@ -87,6 +87,8 @@ namespace RapchieuPhim.API.Constants
         public const string CategoryNotFound = "Thể loại phim không tồn tại hoặc đã bị xóa.";
         public const string CategoryNameRequired = "Tên thể loại không được để trống.";
         public const string CategoryUpdateSuccess = "Cập nhật thể loại phim thành công!";
+        public const string UpdateMovieSuccess = "Cập nhật thông tin bộ phim thành công!";
+        public const string DeleteMovieSuccess = "Đã xóa phim thành công khỏi hệ thống!";
 
         // --- CÁC HÀM TRẢ VỀ THÔNG BÁO CHỨA ID BIẾN ĐỘNG ---
         public static string MovieNotFoundWithId(int id) => $"Không tìm thấy bộ phim có ID: {id}.";
@@ -189,6 +191,8 @@ namespace RapchieuPhim.API.Constants
         public const string UnauthorizedBookingCancel = "Bạn không có quyền hủy đơn đặt vé này.";
         public const string CancelBookingSuccess = "Hủy đơn đặt vé và giải phóng ghế thành công!";
         public const string CreateBookingSuccess = "Đặt vé xem phim thành công!";
+        public const string GetHistorySuccess = "Lấy lịch sử thành công.";
+        public const string OnlyStaffCanCreateCounterBooking = "Chỉ nhân viên mới được quyền tạo đơn đặt vé tại quầy.";
         // --- CÁC HÀM TRẢ VỀ THÔNG BÁO CHỨA BIẾN ĐỘNG ĐỘNG ---
         public static string BookingNotFoundWithId(int id) => $"Không tìm thấy đơn đặt vé có ID = {id}.";
 

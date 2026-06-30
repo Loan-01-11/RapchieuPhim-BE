@@ -152,7 +152,7 @@ namespace RapchieuPhim.API.Services
                 throw;
             }
 
-            return (true, "Cập nhật thông tin bộ phim thành công!", 200, null);
+            return (true, ValidationMessages.UpdateMovieSuccess, 200, null);
         }
 
         // 👑 6. XÓA PHIM (CHỈ SUPER ADMIN)
@@ -168,7 +168,7 @@ namespace RapchieuPhim.API.Services
             _context.Movies.Remove(movie);
             await _context.SaveChangesAsync();
 
-            return (true, "Đã xóa phim thành công khỏi hệ thống!", 200, null);
+            return (true, ValidationMessages.DeleteMovieSuccess, 200, null);
         }
 
         // 🔓 7. DANH SÁCH PHIM KÈM SUẤT CHIẾU KHẢ DỤNG (Movie Catalog)

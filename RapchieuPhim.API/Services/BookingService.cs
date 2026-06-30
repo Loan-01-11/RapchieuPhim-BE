@@ -84,7 +84,7 @@ namespace RapchieuPhim.API.Services
         // 🛡️ LUỒNG BẢO MẬT: Khách thường chỉ được xem vé của chính mình, Admin/Staff được xem hết
         public async Task<(bool IsSuccess, string Message, List<BookingDetailResponse>? Data)> GetHistoryByUserAsync(int userId, int currentUserId, string currentRole)
         {
-            if (currentRole == "Customer" && userId != currentUserId)
+            if (currentRole == RoleConstants.Customer && userId != currentUserId)
                 return (false, ValidationMessages.UnauthorizedBookingView, null);
 
             var data = await _context.VwBookingDetails
@@ -110,7 +110,7 @@ namespace RapchieuPhim.API.Services
                     BookingDate = b.BookingDate
                 }).ToListAsync();
 
-            return (true, "Lấy lịch sử thành công.", data);
+            return (true, ValidationMessages.GetHistorySuccess, data);
         }
 
         // 🌟 Tận dụng cái View VW_AVAILABLE_SEATS để lọc danh sách ghế trống siêu tốc
@@ -140,8 +140,8 @@ namespace RapchieuPhim.API.Services
             // Nếu Nhân viên bán vé tại quầy (Counter)
             if (request.BookingType.Trim() == "Counter")
             {
-                if (currentRole != "Admin" && currentRole != "Staff")
-                    return (false, "Chỉ nhân viên mới được quyền tạo đơn đặt vé tại quầy.", 0);
+                if (currentRole != RoleConstants.Admin && currentRole != RoleConstants.Staff)
+                    return (false, ValidationMessages.OnlyStaffCanCreateCounterBooking, 0);
 
                 // ➔ Nếu không truyền Id khách, đơn hàng sẽ ăn theo Id của chính nhân viên đang đăng nhập
                 finalUserId = (request.TargetUserId == null || request.TargetUserId == 0)
@@ -185,7 +185,7 @@ namespace RapchieuPhim.API.Services
                 return (false, ValidationMessages.BookingNotFoundWithId(bookingId));
 
             // Bảo mật: Khách hàng chỉ được quyền tự hủy đơn của chính mình
-            if (currentRole == "Customer" && booking.UserId != currentUserId)
+            if (currentRole == RoleConstants.Customer && booking.UserId != currentUserId)
                 return (false, ValidationMessages.UnauthorizedBookingCancel);
 
             // 🔥 THAY VÌ GỌI STORED PROCEDURE ĐỂ ĐỔI STATUS -> TA XÓA SỔ HOÀN TOÀN BẢN GHI KHỎI BẢNG BOOKINGS
