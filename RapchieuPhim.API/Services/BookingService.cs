@@ -174,6 +174,32 @@ namespace RapchieuPhim.API.Services
             if (resultBookingId == 0)
                 return (false, resultMessage, 0);
 
+            try
+            {
+                var booking = await _context.Bookings.FindAsync(resultBookingId);
+                if (booking != null)
+                {
+                    booking.Status = "Confirmed";
+                    string autoTicketCode = "TIC" + Guid.NewGuid().ToString().Replace("-", "").Substring(0, 7).ToUpper();
+                    string autoQrCodeUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" + autoTicketCode;
+                    var ticket = new Ticket
+                    {
+                        BookingId = resultBookingId,
+                        TicketCode = autoTicketCode,
+                        QrCodeUrl = autoQrCodeUrl,
+                        Price = booking.TotalAmount,
+                        IssuedAt = DateTime.Now,
+                        Status = "Active"
+                    };
+                    _context.Tickets.Add(ticket);
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error auto-issuing ticket: " + ex.Message);
+            }
+
             return (true, ValidationMessages.CreateBookingSuccess, resultBookingId);
         }
 
@@ -196,3 +222,4 @@ namespace RapchieuPhim.API.Services
         }
     }
 }
+
