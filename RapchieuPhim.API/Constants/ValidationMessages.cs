@@ -193,6 +193,9 @@ namespace RapchieuPhim.API.Constants
         public const string CreateBookingSuccess = "Đặt vé xem phim thành công!";
         public const string GetHistorySuccess = "Lấy lịch sử thành công.";
         public const string OnlyStaffCanCreateCounterBooking = "Chỉ nhân viên mới được quyền tạo đơn đặt vé tại quầy.";
+        public const string Counter = "Counter";
+        public const string Online = "Online";
+        public const string StutusComfirmed = "Confirmed";
         // --- CÁC HÀM TRẢ VỀ THÔNG BÁO CHỨA BIẾN ĐỘNG ĐỘNG ---
         public static string BookingNotFoundWithId(int id) => $"Không tìm thấy đơn đặt vé có ID = {id}.";
 

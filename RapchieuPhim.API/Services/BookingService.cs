@@ -138,7 +138,7 @@ namespace RapchieuPhim.API.Services
             int? staffId = null;
 
             // Nếu Nhân viên bán vé tại quầy (Counter)
-            if (request.BookingType.Trim() == "Counter")
+            if (request.BookingType.Trim() == ValidationMessages.Counter)
             {
                 if (currentRole != RoleConstants.Admin && currentRole != RoleConstants.Staff)
                     return (false, ValidationMessages.OnlyStaffCanCreateCounterBooking, 0);
@@ -179,7 +179,7 @@ namespace RapchieuPhim.API.Services
                 var booking = await _context.Bookings.FindAsync(resultBookingId);
                 if (booking != null)
                 {
-                    booking.Status = "Confirmed";
+                    booking.Status = ValidationMessages.StutusComfirmed;
                     //Guid.NewGuid().ToString() ➔ Sinh ra một chuỗi ngẫu nhiên dài
                     //Replace("-", "") ➔ Xóa sạch các dấu gạch ngang
                     //Substring(0, 7) ➔ Cắt lấy đúng 7 ký tự đầu tiên để mã vé không bị quá dài

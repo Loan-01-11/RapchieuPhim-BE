@@ -1,3 +1,4 @@
+using RapchieuPhim.API.Constants;
 using System.ComponentModel.DataAnnotations;
 
 namespace RapchieuPhim.API.DTO.DTORequest
@@ -14,7 +15,7 @@ namespace RapchieuPhim.API.DTO.DTORequest
         public string? DiscountCode { get; set; }
 
         [Required]
-        public string BookingType { get; set; } = "Online"; // Online | Counter
+        public string BookingType { get; set; } = ValidationMessages.Online; // Online | Counter
 
         // Dùng khi nhân viên bán vé hộ tại quầy, nếu Online thì tự động bóc từ Token
         public int? TargetUserId { get; set; }
