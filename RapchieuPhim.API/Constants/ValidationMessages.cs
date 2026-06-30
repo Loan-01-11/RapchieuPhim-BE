@@ -66,7 +66,7 @@ namespace RapchieuPhim.API.Constants
         public const string OnlyCustomerRegistrationAllowed = "Chỉ cho phép đăng ký tài khoản Customer qua endpoint này.";
         public const string UnauthorizedRoleChange = "Quyền hạn bị từ chối! Chỉ Admin tối cao duy nhất mới có quyền thay đổi chức vụ (Phân quyền) của người khác.";
         public const string UnauthorizedDelete = "Quyền hạn bị từ chối! Chỉ duy nhất Admin cấp cao mới có quyền xóa dữ liệu khỏi hệ thống.";
-
+        public const string UpdatedProfileSuccessfully = "Cập nhật hồ sơ cá nhân thành công!";
         #endregion
 
         #region 6. ĐĂNG NHẬP BÊN THỨ BA (Third-party Authentication)
@@ -157,12 +157,12 @@ namespace RapchieuPhim.API.Constants
         public const string TicketStatusInvalid = "Trạng thái vé không hợp lệ (Chỉ chấp nhận: Active | Used | Cancelled).";
         public const string TicketUpdateStatusSuccess = "Cập nhật trạng thái vé thành công!";
         public const string TicketConcurrencyError = "Dữ liệu vé đã bị thay đổi bởi một luồng khác, vui lòng thử lại.";
-
+        public static string ErrorAutoTicket = "Lỗi khi tự động cấp vé: ";
         // --- CÁC HÀM TRẢ VỀ THÔNG BÁO CHỨA BIẾN ĐỘNG ĐỘNG ---
         public static string TicketNotFoundWithId(int id) => $"Không tìm thấy vé có ID = {id}.";
         public static string TicketNotFoundWithCode(string code) => $"Không tìm thấy vé mang mã Code: {code}.";
         public static string TicketNotFoundWithBooking(int bookingId) => $"Không tìm thấy vé nào thuộc đơn đặt vé ID: {bookingId}.";
-
+        
         #endregion
 
         #region 13. PHÂN HỆ CẤU HÌNH GIÁ VÉ (Ticket Pricing Management)

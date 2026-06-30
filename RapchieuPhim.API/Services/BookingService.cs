@@ -180,6 +180,10 @@ namespace RapchieuPhim.API.Services
                 if (booking != null)
                 {
                     booking.Status = "Confirmed";
+                    //Guid.NewGuid().ToString() ➔ Sinh ra một chuỗi ngẫu nhiên dài
+                    //Replace("-", "") ➔ Xóa sạch các dấu gạch ngang
+                    //Substring(0, 7) ➔ Cắt lấy đúng 7 ký tự đầu tiên để mã vé không bị quá dài
+                    //Substring(0, 7) ➔ Cắt lấy đúng 7 ký tự đầu tiên để mã vé không bị quá dài
                     string autoTicketCode = "TIC" + Guid.NewGuid().ToString().Replace("-", "").Substring(0, 7).ToUpper();
                     string autoQrCodeUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" + autoTicketCode;
                     var ticket = new Ticket
@@ -189,7 +193,7 @@ namespace RapchieuPhim.API.Services
                         QrCodeUrl = autoQrCodeUrl,
                         Price = booking.TotalAmount,
                         IssuedAt = DateTime.Now,
-                        Status = "Active"
+                        Status = ShowtimeMessages.StatusActive
                     };
                     _context.Tickets.Add(ticket);
                     await _context.SaveChangesAsync();
@@ -197,7 +201,7 @@ namespace RapchieuPhim.API.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error auto-issuing ticket: " + ex.Message);
+                Console.WriteLine(ValidationMessages.ErrorAutoTicket + ex.Message);
             }
 
             return (true, ValidationMessages.CreateBookingSuccess, resultBookingId);

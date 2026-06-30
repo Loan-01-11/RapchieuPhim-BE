@@ -96,7 +96,7 @@ namespace RapchieuPhim.API.Services
             user.Gender = string.IsNullOrWhiteSpace(request.Gender) ? null : request.Gender.Trim();
 
             await _context.SaveChangesAsync();
-            return (true, "Cập nhật hồ sơ cá nhân thành công!", 200);
+            return (true, ValidationMessages.UpdatedProfileSuccessfully, 200);
         }
 
         // 👑 4. ADMIN CẬP NHẬT NGƯỜI KHÁC
@@ -117,7 +117,7 @@ namespace RapchieuPhim.API.Services
             if (!DateOnly.TryParseExact(request.DateOfBirth, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dob))
                 return (false, ValidationMessages.DateOfBirthInvalidFormatSimple, 400);
 
-            var allowedRoles = new[] { "Admin", "Staff", "Customer" };
+            var allowedRoles = new[] { RoleConstants.Admin, RoleConstants.Staff, RoleConstants.Customer };
             if (!allowedRoles.Contains(newRole))
                 return (false, ValidationMessages.RoleSelectionInvalid, 400);
 
