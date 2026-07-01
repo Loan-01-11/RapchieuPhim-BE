@@ -85,7 +85,12 @@ namespace RapchieuPhim.API.Controllers
             if (!result.IsSuccess)
                 return BadRequest(new { Message = result.Message });
 
-            return Ok(new { Message = result.Message, BookingId = result.BookingId });
+            return Ok(new
+            {
+                Message    = result.Message,
+                BookingIds = result.BookingIds,
+                Count      = result.BookingIds.Count
+            });
         }
 
         // DELETE: api/Bookings/{id} 🛡️ (HỦY ĐƠN VÉ - Sử dụng Stored Procedure an toàn đa tầng)

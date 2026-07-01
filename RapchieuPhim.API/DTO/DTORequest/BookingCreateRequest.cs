@@ -8,8 +8,11 @@ namespace RapchieuPhim.API.DTO.DTORequest
         [Required]
         public int ShowTimeId { get; set; }
 
+        // Danh sách ghế muốn đặt — tối thiểu 1, tối đa 10 ghế mỗi lần
         [Required]
-        public int SeatId { get; set; }
+        [MinLength(1, ErrorMessage = ValidationMessages.BookingMessages.SeatIdsMinLength)]
+        [MaxLength(10, ErrorMessage = ValidationMessages.BookingMessages.SeatIdsMaxLength)]
+        public List<int> SeatIds { get; set; } = new();
 
         [StringLength(50)]
         public string? DiscountCode { get; set; }

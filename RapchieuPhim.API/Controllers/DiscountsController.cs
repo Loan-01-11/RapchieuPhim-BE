@@ -1,94 +1,142 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using RapchieuPhim.API.Models;
+using RapchieuPhim.API.Constants;
+using RapchieuPhim.API.DTOs.DTORequest;
+using RapchieuPhim.API.Services;
+using System.Security.Claims;
 
 namespace RapchieuPhim.API.Controllers
 {
-    [Route("api/[controller]")]
-    [ApiController]
+    [Route("api/[controller]")] // Định nghĩa đường dẫn URL (Ví dụ: api/Discounts)
+    [ApiController]             // Báo hiệu đây là API Controller (Tự động bắt lỗi dữ liệu rác từ Frontend)
+    [Authorize]                 // 🔐 KHÓA TỔNG: Bắt buộc phải đăng nhập mới được truy cập
     public class DiscountsController : ControllerBase
     {
-        private readonly CinemaManagementContext _context;
+        // 1. Khai báo "ông trợ lý" tầng Service để lo việc tính toán nghiệp vụ
+        private readonly IDiscountService _discountService;
 
-        public DiscountsController(CinemaManagementContext context)
+        // 2. Hàm khởi tạo: Hệ thống .NET tự động Inject Service vào khi có người gọi API
+        public DiscountsController(IDiscountService discountService)
         {
-            _context = context;
+            _discountService = discountService;
         }
 
-        // GET: api/Discounts
+        /// <summary>
+        /// API LẤY TẤT CẢ MÃ GIẢM GIÁ
+        /// Quyền hạn: Admin và Staff được xem toàn bộ danh sách
+        /// </summary>
         [HttpGet]
+        [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> GetAll()
         {
-            var discounts = await _context.Discounts.ToListAsync();
+            // Sai bảo ông Service hốt hết danh sách mã giảm giá lên
+            var discounts = await _discountService.GetAllAsync();
             return Ok(discounts);
         }
 
-        // GET: api/Discounts/{id}
-        [HttpGet("{id}")]
+        /// <summary>
+        /// API XEM CHI TIẾT 1 MÃ GIẢM GIÁ THEO ID
+        /// Quyền hạn: Admin và Staff được xem
+        /// </summary>
+        [HttpGet("{id}")] // Ví dụ: api/Discounts/5
+        [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> GetById(int id)
         {
-            var discount = await _context.Discounts.FindAsync(id);
+            // Nhờ Service tìm kiếm theo ID
+            var discount = await _discountService.GetByIdAsync(id);
+
+            // BẪY LỖI: Không tìm thấy mã giảm giá
             if (discount == null)
-                return NotFound(new { Message = $"Discount with id {id} not found." });
+                return NotFound(new { Message = DiscountMessages.NotFoundWithId(id) });
+
             return Ok(discount);
         }
 
-        // GET: api/Discounts/ByCode/{code} – validate a discount code
-        [HttpGet("ByCode/{code}")]
+        /// <summary>
+        /// API KIỂM TRA VÀ LẤY MÃ GIẢM GIÁ THEO CODE
+        /// Quyền hạn: Bất kỳ ai đã đăng nhập đều dùng được (để áp mã khi đặt vé)
+        /// Chỉ trả về mã còn hiệu lực (IsActive = true, trong khoảng thời gian hợp lệ)
+        /// </summary>
+        [HttpGet("ByCode/{code}")] // Ví dụ: api/Discounts/ByCode/SUMMER2026
         public async Task<IActionResult> GetByCode(string code)
         {
-            var discount = await _context.Discounts
-                .Where(d => d.DiscountCode == code && d.IsActive
-                    && d.StartDate <= DateTime.Now
-                    && (d.EndDate == null || d.EndDate >= DateTime.Now))
-                .FirstOrDefaultAsync();
+            // Nhờ Service xác thực và tìm mã theo Code
+            var discount = await _discountService.GetByCodeAsync(code);
 
+            // Nếu không tìm thấy hoặc mã đã hết hạn/vô hiệu
             if (discount == null)
-                return NotFound(new { Message = "Discount code is invalid or expired." });
+                return NotFound(new { Message = DiscountMessages.InvalidOrExpiredCode });
+
             return Ok(discount);
         }
 
-        // POST: api/Discounts
+        /// <summary>
+        /// API TẠO MÃ GIẢM GIÁ MỚI
+        /// Quyền hạn: 👑 CHỈ ADMIN MỚI ĐƯỢC PHÉP tạo
+        /// </summary>
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Discount discount)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Create([FromBody] DiscountRequest request)
         {
-            _context.Discounts.Add(discount);
-            await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetById), new { id = discount.DiscountId }, discount);
+            // 1. Bóc Token để lấy UserId của Admin đang thao tác
+            var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdStr, out int createdByUserId))
+                return Unauthorized(new { Message = ValidationMessages.TokenInvalid });
+
+            // 2. Đẩy xuống Service để xử lý nghiệp vụ và lưu DB
+            var result = await _discountService.CreateAsync(request, createdByUserId);
+
+            // 3. Nếu Service báo thất bại (trùng code, sai loại, ...)
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { Message = result.Message });
+
+            // 4. Trả về 201 Created kèm theo dữ liệu mã giảm giá vừa tạo
+            return CreatedAtAction(nameof(GetById), new { id = result.Data!.DiscountId }, result.Data);
         }
 
-        // PUT: api/Discounts/{id}
+        /// <summary>
+        /// API CẬP NHẬT MÃ GIẢM GIÁ
+        /// Quyền hạn: 👑 CHỈ SUPER ADMIN MỚI ĐƯỢC SỬA (bảo vệ ở tầng Service)
+        /// </summary>
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] Discount discount)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Update(int id, [FromBody] DiscountRequest request)
         {
-            if (id != discount.DiscountId)
-                return BadRequest(new { Message = "Id mismatch." });
+            // 1. Bóc Token để lấy Email của Admin đang thao tác
+            var currentOperatorEmail = User.FindFirst(ClaimTypes.Email)?.Value;
 
-            _context.Entry(discount).State = EntityState.Modified;
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_context.Discounts.Any(e => e.DiscountId == id))
-                    return NotFound(new { Message = $"Discount with id {id} not found." });
-                throw;
-            }
-            return NoContent();
+            // 2. Truyền xuống Service để thẩm định quyền và cập nhật
+            var result = await _discountService.UpdateAsync(id, request, currentOperatorEmail ?? string.Empty);
+
+            // 3. Nếu Service báo thất bại (403, 404, 409, 400)
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { Message = result.Message });
+
+            // 4. Thành công
+            return Ok(new { Message = result.Message });
         }
 
-        // DELETE: api/Discounts/{id}
+        /// <summary>
+        /// API XÓA MÃ GIẢM GIÁ
+        /// Quyền hạn: 👑 CHỈ SUPER ADMIN MỚI ĐƯỢC XÓA (bảo vệ ở tầng Service)
+        /// Bảo vệ thêm: Không xóa được mã đã có lịch sử sử dụng
+        /// </summary>
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
-            var discount = await _context.Discounts.FindAsync(id);
-            if (discount == null)
-                return NotFound(new { Message = $"Discount with id {id} not found." });
+            // 1. Bóc Token để lấy Email của Admin đang thao tác
+            var currentOperatorEmail = User.FindFirst(ClaimTypes.Email)?.Value;
 
-            _context.Discounts.Remove(discount);
-            await _context.SaveChangesAsync();
-            return NoContent();
+            // 2. Truyền xuống Service để thẩm định quyền và xóa
+            var result = await _discountService.DeleteAsync(id, currentOperatorEmail ?? string.Empty);
+
+            // 3. Nếu Service báo thất bại (403, 404, 409)
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { Message = result.Message });
+
+            // 4. Thành công
+            return Ok(new { Message = result.Message });
         }
     }
 }

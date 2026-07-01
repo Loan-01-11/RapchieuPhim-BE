@@ -162,7 +162,7 @@ namespace RapchieuPhim.API.Constants
         public static string TicketNotFoundWithId(int id) => $"Không tìm thấy vé có ID = {id}.";
         public static string TicketNotFoundWithCode(string code) => $"Không tìm thấy vé mang mã Code: {code}.";
         public static string TicketNotFoundWithBooking(int bookingId) => $"Không tìm thấy vé nào thuộc đơn đặt vé ID: {bookingId}.";
-        
+
         #endregion
 
         #region 13. PHÂN HỆ CẤU HÌNH GIÁ VÉ (Ticket Pricing Management)
@@ -200,7 +200,27 @@ namespace RapchieuPhim.API.Constants
         public static string BookingNotFoundWithId(int id) => $"Không tìm thấy đơn đặt vé có ID = {id}.";
 
         #endregion
+
+        // ── Hằng số cho nghiệp vụ đặt vé có mã giảm giá ────────────────────────────
+        public static class BookingMessages
+        {
+            public const string SeatAlreadyBooked        = "Ghế này đã được đặt trong suất chiếu, vui lòng chọn ghế khác.";
+            public const string DuplicateSeatIds         = "Danh sách ghế bị trùng, vui lòng chọn lại.";
+            public const string DiscountMaxUsageReached  = "Mã giảm giá đã hết lượt sử dụng.";
+            public const string DiscountUserLimitReached = "Bạn đã dùng mã giảm giá này đủ số lần cho phép.";
+            public const string CreateBookingFailed      = "Đặt vé thất bại, vui lòng thử lại.";
+            public const string PricingNotFound          = "Không tìm thấy cấu hình giá vé phù hợp với loại phòng và loại ghế này.";
+            public const string SeatIdsMinLength         = "Vui lòng chọn ít nhất 1 ghế.";
+            public const string SeatIdsMaxLength         = "Chỉ được đặt tối đa 10 ghế mỗi lần.";
+
+            public static string OrderBelowMinAmount(decimal minAmount)
+                => $"Giá trị đơn hàng chưa đạt mức tối thiểu {minAmount:N0} VNĐ để áp dụng mã giảm giá.";
+
+            public static string SeatsAlreadyBooked(List<int> seatIds)
+                => $"Các ghế sau đã được đặt: {string.Join(", ", seatIds)}. Vui lòng chọn ghế khác.";
+        }
     }
+
 
     // ── Hằng số dành riêng cho phân hệ Quản lý Ghế (Seat) ──────────────────
     public static class SeatMessages
@@ -279,6 +299,44 @@ namespace RapchieuPhim.API.Constants
         public const string SeatStatusHeld      = "Held";
 
         public static string NotFoundWithId(int id) => $"Không tìm thấy suất chiếu có ID: {id}.";
+    }
+
+    // ── Hằng số dành riêng cho phân hệ Quản lý Mã Giảm Giá (Discount) ────────────
+    public static class DiscountMessages
+    {
+        // Validation dữ liệu đầu vào
+        public const string DiscountCodeRequired      = "Mã giảm giá không được để trống.";
+        public const string DiscountCodeMaxLength     = "Mã giảm giá không được vượt quá 50 ký tự.";
+        public const string DiscountTypeRequired      = "Loại giảm giá không được để trống.";
+        public const string DiscountValueInvalid      = "Giá trị giảm phải lớn hơn 0.";
+        public const string MinOrderAmountInvalid     = "Giá trị đơn hàng tối thiểu không được âm.";
+        public const string MaxUsagePerUserInvalid    = "Số lần dùng tối đa mỗi người phải ít nhất là 1.";
+        public const string StartDateRequired         = "Ngày bắt đầu không được để trống.";
+
+        // Validation nghiệp vụ
+        public const string InvalidDiscountType       = "Loại giảm giá không hợp lệ. Chỉ chấp nhận: Percent hoặc Fixed.";
+        public const string PercentValueExceeds100    = "Giá trị giảm theo phần trăm không được vượt quá 100%.";
+        public const string EndDateBeforeStartDate    = "Ngày hết hạn phải sau ngày bắt đầu.";
+        public const string DiscountCodeAlreadyExists = "Mã giảm giá này đã tồn tại trong hệ thống.";
+        public const string CannotDeleteUsedDiscount  = "Không thể xóa mã giảm giá đã được sử dụng.";
+        public const string InvalidOrExpiredCode      = "Mã giảm giá không hợp lệ hoặc đã hết hạn.";
+
+        // Phân quyền
+        public const string UnauthorizedUpdate        = "Quyền hạn bị từ chối! Chỉ Admin tối cao mới có quyền chỉnh sửa mã giảm giá.";
+
+        // Thành công
+        public const string CreateSuccess             = "Tạo mã giảm giá mới thành công!";
+        public const string UpdateSuccess             = "Cập nhật mã giảm giá thành công!";
+        public const string DeleteSuccess             = "Xóa mã giảm giá thành công!";
+        public const string ConcurrencyError          = "Dữ liệu mã giảm giá đã bị thay đổi bởi một luồng khác, vui lòng thử lại.";
+
+        // Loại giảm giá hợp lệ
+        public const string TypePercent               = "Percent";
+        public const string TypeFixed                 = "Fixed";
+        public static readonly string[] ValidDiscountTypes = { TypePercent, TypeFixed };
+
+        // Hàm trả về thông báo chứa ID động
+        public static string NotFoundWithId(int id) => $"Không tìm thấy mã giảm giá có ID = {id}.";
     }
 
     // ── Hằng số dành riêng cho phân hệ Giữ Ghế Tạm Thời (Seat Hold) ────────────

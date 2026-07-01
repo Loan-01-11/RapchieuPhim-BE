@@ -1,10 +1,8 @@
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using RapchieuPhim.API.Constants;
 using RapchieuPhim.API.DTO.DTORequest;
 using RapchieuPhim.API.DTOs.DTOResponse;
 using RapchieuPhim.API.Models;
-using System.Data;
 
 namespace RapchieuPhim.API.Services
 {
@@ -14,7 +12,7 @@ namespace RapchieuPhim.API.Services
         Task<BookingDetailResponse?> GetDetailByIdAsync(int id);
         Task<(bool IsSuccess, string Message, List<BookingDetailResponse>? Data)> GetHistoryByUserAsync(int userId, int currentUserId, string currentRole);
         Task<List<AvailableSeatResponse>> GetAvailableSeatsAsync(int showTimeId);
-        Task<(bool IsSuccess, string Message, int BookingId)> CreateBookingAsync(BookingCreateRequest request, int currentUserId, string currentRole);
+        Task<(bool IsSuccess, string Message, List<int> BookingIds)> CreateBookingAsync(BookingCreateRequest request, int currentUserId, string currentRole);
         Task<(bool IsSuccess, string Message)> CancelBookingAsync(int bookingId, int currentUserId, string currentRole);
     }
 
@@ -28,29 +26,29 @@ namespace RapchieuPhim.API.Services
             _context = context;
         }
 
-        // 🌟 Tận dụng cái View VW_BOOKING_DETAIL của bạn để hốt toàn bộ lịch sử sạch sẽ
+        // 🌟 Tận dụng View VW_BOOKING_DETAIL để hốt toàn bộ lịch sử sạch sẽ
         public async Task<List<BookingDetailResponse>> GetAllDetailsAsync()
         {
             return await _context.VwBookingDetails
                 .Select(b => new BookingDetailResponse
                 {
-                    BookingId = b.BookingId,
+                    BookingId    = b.BookingId,
                     CustomerName = b.CustomerName,
-                    Email = b.Email,
-                    MovieTitle = b.MovieTitle,
-                    AreaName = b.AreaName,
-                    CinemaName = b.CinemaName,
-                    RoomName = b.RoomName,
-                    RoomType = b.RoomType,
-                    SeatNumber = b.SeatNumber,
-                    SeatType = b.SeatType,
-                    StartTime = b.StartTime,
-                    TicketPrice = b.TicketPrice,
-                    DiscountAmt = b.DiscountAmt,
-                    TotalAmount = b.TotalAmount,
-                    BookingType = b.BookingType,
-                    Status = b.Status,
-                    BookingDate = b.BookingDate
+                    Email        = b.Email,
+                    MovieTitle   = b.MovieTitle,
+                    AreaName     = b.AreaName,
+                    CinemaName   = b.CinemaName,
+                    RoomName     = b.RoomName,
+                    RoomType     = b.RoomType,
+                    SeatNumber   = b.SeatNumber,
+                    SeatType     = b.SeatType,
+                    StartTime    = b.StartTime,
+                    TicketPrice  = b.TicketPrice,
+                    DiscountAmt  = b.DiscountAmt,
+                    TotalAmount  = b.TotalAmount,
+                    BookingType  = b.BookingType,
+                    Status       = b.Status,
+                    BookingDate  = b.BookingDate
                 }).ToListAsync();
         }
 
@@ -61,27 +59,27 @@ namespace RapchieuPhim.API.Services
                 .Where(b => b.BookingId == id)
                 .Select(b => new BookingDetailResponse
                 {
-                    BookingId = b.BookingId,
+                    BookingId    = b.BookingId,
                     CustomerName = b.CustomerName,
-                    Email = b.Email,
-                    MovieTitle = b.MovieTitle,
-                    AreaName = b.AreaName,
-                    CinemaName = b.CinemaName,
-                    RoomName = b.RoomName,
-                    RoomType = b.RoomType,
-                    SeatNumber = b.SeatNumber,
-                    SeatType = b.SeatType,
-                    StartTime = b.StartTime,
-                    TicketPrice = b.TicketPrice,
-                    DiscountAmt = b.DiscountAmt,
-                    TotalAmount = b.TotalAmount,
-                    BookingType = b.BookingType,
-                    Status = b.Status,
-                    BookingDate = b.BookingDate
+                    Email        = b.Email,
+                    MovieTitle   = b.MovieTitle,
+                    AreaName     = b.AreaName,
+                    CinemaName   = b.CinemaName,
+                    RoomName     = b.RoomName,
+                    RoomType     = b.RoomType,
+                    SeatNumber   = b.SeatNumber,
+                    SeatType     = b.SeatType,
+                    StartTime    = b.StartTime,
+                    TicketPrice  = b.TicketPrice,
+                    DiscountAmt  = b.DiscountAmt,
+                    TotalAmount  = b.TotalAmount,
+                    BookingType  = b.BookingType,
+                    Status       = b.Status,
+                    BookingDate  = b.BookingDate
                 }).FirstOrDefaultAsync();
         }
 
-        // 🛡️ LUỒNG BẢO MẬT: Khách thường chỉ được xem vé của chính mình, Admin/Staff được xem hết
+        // 🛡️ Khách thường chỉ được xem vé của chính mình, Admin/Staff xem hết
         public async Task<(bool IsSuccess, string Message, List<BookingDetailResponse>? Data)> GetHistoryByUserAsync(int userId, int currentUserId, string currentRole)
         {
             if (currentRole == RoleConstants.Customer && userId != currentUserId)
@@ -91,29 +89,29 @@ namespace RapchieuPhim.API.Services
                 .Where(b => _context.Bookings.Any(realBk => realBk.BookingId == b.BookingId && realBk.UserId == userId))
                 .Select(b => new BookingDetailResponse
                 {
-                    BookingId = b.BookingId,
+                    BookingId    = b.BookingId,
                     CustomerName = b.CustomerName,
-                    Email = b.Email,
-                    MovieTitle = b.MovieTitle,
-                    AreaName = b.AreaName,
-                    CinemaName = b.CinemaName,
-                    RoomName = b.RoomName,
-                    RoomType = b.RoomType,
-                    SeatNumber = b.SeatNumber,
-                    SeatType = b.SeatType,
-                    StartTime = b.StartTime,
-                    TicketPrice = b.TicketPrice,
-                    DiscountAmt = b.DiscountAmt,
-                    TotalAmount = b.TotalAmount,
-                    BookingType = b.BookingType,
-                    Status = b.Status,
-                    BookingDate = b.BookingDate
+                    Email        = b.Email,
+                    MovieTitle   = b.MovieTitle,
+                    AreaName     = b.AreaName,
+                    CinemaName   = b.CinemaName,
+                    RoomName     = b.RoomName,
+                    RoomType     = b.RoomType,
+                    SeatNumber   = b.SeatNumber,
+                    SeatType     = b.SeatType,
+                    StartTime    = b.StartTime,
+                    TicketPrice  = b.TicketPrice,
+                    DiscountAmt  = b.DiscountAmt,
+                    TotalAmount  = b.TotalAmount,
+                    BookingType  = b.BookingType,
+                    Status       = b.Status,
+                    BookingDate  = b.BookingDate
                 }).ToListAsync();
 
             return (true, ValidationMessages.GetHistorySuccess, data);
         }
 
-        // 🌟 Tận dụng cái View VW_AVAILABLE_SEATS để lọc danh sách ghế trống siêu tốc
+        // 🌟 Lọc danh sách ghế trống qua View VW_AVAILABLE_SEATS
         public async Task<List<AvailableSeatResponse>> GetAvailableSeatsAsync(int showTimeId)
         {
             return await _context.VwAvailableSeats
@@ -122,108 +120,257 @@ namespace RapchieuPhim.API.Services
                 {
                     ShowTimeId = s.ShowTimeId,
                     MovieTitle = s.MovieTitle,
-                    StartTime = s.StartTime,
-                    SeatId = s.SeatId,
+                    StartTime  = s.StartTime,
+                    SeatId     = s.SeatId,
                     SeatNumber = s.SeatNumber,
-                    SeatType = s.SeatType,
-                    RoomId = s.RoomId,
-                    RoomName = s.RoomName
+                    SeatType   = s.SeatType,
+                    RoomId     = s.RoomId,
+                    RoomName   = s.RoomName
                 }).ToListAsync();
         }
 
-        //  Gọi Stored Procedure SP_BOOK_TICKET để tránh lỗi tranh chấp ghế ngồi
-        public async Task<(bool IsSuccess, string Message, int BookingId)> CreateBookingAsync(BookingCreateRequest request, int currentUserId, string currentRole)
+        // ─── TẠO ĐƠN ĐẶT VÉ NHIỀU GHẾ + ÁP MÃ GIẢM GIÁ (xử lý trong C# với Transaction) ───
+        public async Task<(bool IsSuccess, string Message, List<int> BookingIds)> CreateBookingAsync(
+            BookingCreateRequest request, int currentUserId, string currentRole)
         {
-            int finalUserId = currentUserId;
-            int? staffId = null;
+            var emptyList = new List<int>();
 
-            // Nếu Nhân viên bán vé tại quầy (Counter)
+            // ── BƯỚC 1: Kiểm tra danh sách ghế không được trùng nhau ──────────────
+            if (request.SeatIds.Distinct().Count() != request.SeatIds.Count)
+                return (false, ValidationMessages.BookingMessages.DuplicateSeatIds, emptyList);
+
+            // ── BƯỚC 2: Xác định UserId & StaffId ────────────────────────────────
+            int  finalUserId = currentUserId;
+            int? staffId     = null;
+
             if (request.BookingType.Trim() == ValidationMessages.Counter)
             {
                 if (currentRole != RoleConstants.Admin && currentRole != RoleConstants.Staff)
-                    return (false, ValidationMessages.OnlyStaffCanCreateCounterBooking, 0);
+                    return (false, ValidationMessages.OnlyStaffCanCreateCounterBooking, emptyList);
 
-                // ➔ Nếu không truyền Id khách, đơn hàng sẽ ăn theo Id của chính nhân viên đang đăng nhập
                 finalUserId = (request.TargetUserId == null || request.TargetUserId == 0)
                               ? currentUserId
                               : request.TargetUserId.Value;
-
                 staffId = currentUserId;
             }
 
-            // Khai báo các tham số đầu vào đầu ra khớp 100% với SQL Stored Procedure của bạn
-            var pUserId = new SqlParameter("@UserId", finalUserId);
-            var pShowTimeId = new SqlParameter("@ShowTimeId", request.ShowTimeId);
-            var pSeatId = new SqlParameter("@SeatId", request.SeatId);
-            var pDiscountCode = new SqlParameter("@DiscountCode", (object?)request.DiscountCode ?? DBNull.Value);
-            var pBookingType = new SqlParameter("@BookingType", request.BookingType.Trim());
-            var pStaffId = new SqlParameter("@StaffId", (object?)staffId ?? DBNull.Value);
+            // ── BƯỚC 3: Kiểm tra Suất chiếu tồn tại ─────────────────────────────
+            var showtime = await _context.Showtimes
+                .Include(s => s.Room)
+                .FirstOrDefaultAsync(s => s.ShowTimeId == request.ShowTimeId);
+            if (showtime == null)
+                return (false, ShowtimeMessages.NotFoundWithId(request.ShowTimeId), emptyList);
 
-            // Hai tham số lấy giá trị OUTPUT ngược từ SQL Server lên C#
-            var pBookingId = new SqlParameter("@BookingId", SqlDbType.Int) { Direction = ParameterDirection.Output };
-            var pMessage = new SqlParameter("@Message", SqlDbType.NVarChar, 200) { Direction = ParameterDirection.Output };
+            // ── BƯỚC 4: Kiểm tra tất cả ghế tồn tại ─────────────────────────────
+            var seats = await _context.Seats
+                .Where(s => request.SeatIds.Contains(s.SeatId))
+                .ToListAsync();
 
-            // Thực thi lệnh chạy thủ tục lưu trữ dưới SQL Server
-            await _context.Database.ExecuteSqlRawAsync(
-                "EXEC SP_BOOK_TICKET @UserId, @ShowTimeId, @SeatId, @DiscountCode, @BookingType, @StaffId, @BookingId OUTPUT, @Message OUTPUT",
-                pUserId, pShowTimeId, pSeatId, pDiscountCode, pBookingType, pStaffId, pBookingId, pMessage);
+            if (seats.Count != request.SeatIds.Count)
+            {
+                // Tìm ghế nào không tồn tại để báo lỗi cụ thể
+                var foundIds  = seats.Select(s => s.SeatId).ToHashSet();
+                var missingId = request.SeatIds.First(id => !foundIds.Contains(id));
+                return (false, ValidationMessages.SeatNotFoundWithId(missingId), emptyList);
+            }
 
-            int resultBookingId = (int)pBookingId.Value;
-            string resultMessage = pMessage.Value.ToString() ?? "Lỗi hệ thống.";
+            // ── BƯỚC 5: Kiểm tra không có ghế nào đã bị đặt ──────────────────────
+            var takenSeatIds = await _context.Bookings
+                .Where(b => b.ShowTimeId == request.ShowTimeId
+                         && request.SeatIds.Contains(b.SeatId)
+                         && b.Status != "Cancelled")
+                .Select(b => b.SeatId)
+                .ToListAsync();
 
-            if (resultBookingId == 0)
-                return (false, resultMessage, 0);
+            if (takenSeatIds.Any())
+                return (false, ValidationMessages.BookingMessages.SeatsAlreadyBooked(takenSeatIds), emptyList);
 
+            // ── BƯỚC 6: Lấy giá vé từ TicketPricing ─────────────────────────────
+            var    today   = DateOnly.FromDateTime(DateTime.Now);
+            string dayType = DateTime.Now.DayOfWeek == DayOfWeek.Saturday ||
+                             DateTime.Now.DayOfWeek == DayOfWeek.Sunday
+                             ? "Weekend" : "Weekday";
+
+            // ── BƯỚC 7: Xử lý mã giảm giá (áp 1 lần cho toàn bộ đơn) ────────────
+            decimal   totalDiscountAmt = 0;
+            int?      discountId       = null;
+            Discount? discount         = null;
+
+            if (!string.IsNullOrWhiteSpace(request.DiscountCode))
+            {
+                // 7a. Tìm mã trong DB
+                discount = await _context.Discounts
+                    .FirstOrDefaultAsync(d =>
+                        d.DiscountCode == request.DiscountCode.Trim().ToUpper() &&
+                        d.IsActive &&
+                        d.StartDate <= DateTime.Now &&
+                        (d.EndDate == null || d.EndDate >= DateTime.Now));
+
+                if (discount == null)
+                    return (false, DiscountMessages.InvalidOrExpiredCode, emptyList);
+
+                // 7b. Kiểm tra mã còn lượt dùng tổng
+                if (discount.MaxUsageTotal.HasValue && discount.UsedCount >= discount.MaxUsageTotal.Value)
+                    return (false, ValidationMessages.BookingMessages.DiscountMaxUsageReached, emptyList);
+
+                // 7c. Kiểm tra lượt dùng của riêng user này
+                var userUsage    = await _context.Userdiscountusages
+                    .FirstOrDefaultAsync(u => u.UserId == finalUserId && u.DiscountId == discount.DiscountId);
+                int userUsedCount = userUsage?.UsedCount ?? 0;
+                if (userUsedCount >= discount.MaxUsagePerUser)
+                    return (false, ValidationMessages.BookingMessages.DiscountUserLimitReached, emptyList);
+
+                discountId = discount.DiscountId;
+            }
+
+            // ── BƯỚC 8: Lưu tất cả trong 1 Transaction ───────────────────────────
+            await using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                var booking = await _context.Bookings.FindAsync(resultBookingId);
-                if (booking != null)
+                var newBookingIds = new List<int>();
+
+                // Tổng giá trước giảm (dùng để kiểm tra MinOrderAmount và tính giảm theo %)
+                decimal grandTotal = 0;
+
+                // Danh sách booking đã tạo (để tính discount sau)
+                var createdBookings = new List<(Booking Booking, decimal TicketPrice)>();
+
+                foreach (var seat in seats)
                 {
-                    booking.Status = ValidationMessages.StutusComfirmed;
-                    //Guid.NewGuid().ToString() ➔ Sinh ra một chuỗi ngẫu nhiên dài
-                    //Replace("-", "") ➔ Xóa sạch các dấu gạch ngang
-                    //Substring(0, 7) ➔ Cắt lấy đúng 7 ký tự đầu tiên để mã vé không bị quá dài
-                    //Substring(0, 7) ➔ Cắt lấy đúng 7 ký tự đầu tiên để mã vé không bị quá dài
-                    string autoTicketCode = "TIC" + Guid.NewGuid().ToString().Replace("-", "").Substring(0, 7).ToUpper();
-                    string autoQrCodeUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" + autoTicketCode;
-                    var ticket = new Ticket
+                    // Lấy giá vé riêng cho từng ghế (mỗi ghế có SeatType khác nhau)
+                    var pricing = await _context.Ticketpricings
+                        .Where(p => p.IsActive
+                                 && (p.RoomType == null || p.RoomType == showtime.Room.RoomType)
+                                 && (p.SeatType == null || p.SeatType == seat.SeatType)
+                                 && (p.DayType  == null || p.DayType  == dayType)
+                                 && p.EffectFrom <= today
+                                 && (p.EffectTo  == null || p.EffectTo >= today))
+                        .OrderByDescending(p => p.EffectFrom)
+                        .FirstOrDefaultAsync();
+
+                    if (pricing == null)
+                        return (false, ValidationMessages.BookingMessages.PricingNotFound, emptyList);
+
+                    grandTotal += pricing.Price;
+                    createdBookings.Add((new Booking
                     {
-                        BookingId = resultBookingId,
-                        TicketCode = autoTicketCode,
-                        QrCodeUrl = autoQrCodeUrl,
-                        Price = booking.TotalAmount,
-                        IssuedAt = DateTime.Now,
-                        Status = ShowtimeMessages.StatusActive
-                    };
-                    _context.Tickets.Add(ticket);
+                        UserId      = finalUserId,
+                        ShowTimeId  = request.ShowTimeId,
+                        SeatId      = seat.SeatId,
+                        DiscountId  = null,          // Gán discount sau khi tính xong
+                        BookingDate = DateTime.Now,
+                        TicketPrice = pricing.Price,
+                        DiscountAmt = 0,             // Cập nhật sau
+                        TotalAmount = pricing.Price, // Cập nhật sau
+                        BookingType = request.BookingType.Trim(),
+                        StaffId     = staffId,
+                        Status      = ValidationMessages.StutusComfirmed
+                    }, pricing.Price));
+                }
+
+                // Tính discount sau khi biết tổng giá
+                if (discount != null)
+                {
+                    // 8a. Kiểm tra tổng đơn đạt MinOrderAmount
+                    if (grandTotal < discount.MinOrderAmount)
+                        return (false, ValidationMessages.BookingMessages.OrderBelowMinAmount(discount.MinOrderAmount), emptyList);
+
+                    // 8b. Tính tổng số tiền giảm cho toàn bộ đơn
+                    totalDiscountAmt = discount.DiscountType == DiscountMessages.TypePercent
+                        ? Math.Round(grandTotal * discount.DiscountValue / 100, 0)
+                        : discount.DiscountValue;
+
+                    totalDiscountAmt = Math.Min(totalDiscountAmt, grandTotal);
+
+                    // 8c. Phân bổ discount đều ra các booking (ghế cuối cùng nhận phần dư lẻ)
+                    decimal discountPerSeat = Math.Floor(totalDiscountAmt / seats.Count);
+                    decimal remainder       = totalDiscountAmt - discountPerSeat * seats.Count;
+
+                    for (int i = 0; i < createdBookings.Count; i++)
+                    {
+                        decimal thisDiscount  = discountPerSeat + (i == createdBookings.Count - 1 ? remainder : 0);
+                        var (booking, price)  = createdBookings[i];
+                        booking.DiscountId    = discountId;
+                        booking.DiscountAmt   = thisDiscount;
+                        booking.TotalAmount   = price - thisDiscount;
+                    }
+                }
+
+                // 8d. Lưu tất cả Booking vào DB
+                foreach (var (booking, _) in createdBookings)
+                {
+                    _context.Bookings.Add(booking);
+                    await _context.SaveChangesAsync(); // Cần BookingId để tạo Ticket
+
+                    // Cấp Ticket tự động kèm QR Code
+                    string ticketCode = "TIC" + Guid.NewGuid().ToString().Replace("-", "").Substring(0, 7).ToUpper();
+                    _context.Tickets.Add(new Ticket
+                    {
+                        BookingId  = booking.BookingId,
+                        TicketCode = ticketCode,
+                        QrCodeUrl  = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" + ticketCode,
+                        Price      = booking.TotalAmount,
+                        IssuedAt   = DateTime.Now,
+                        Status     = ShowtimeMessages.StatusActive
+                    });
+                    await _context.SaveChangesAsync();
+
+                    newBookingIds.Add(booking.BookingId);
+                }
+
+                // 8e. Cập nhật thống kê sử dụng mã giảm giá (1 lần duy nhất)
+                if (discount != null)
+                {
+                    discount.UsedCount++;
+
+                    var userUsage = await _context.Userdiscountusages
+                        .FirstOrDefaultAsync(u => u.UserId == finalUserId && u.DiscountId == discount.DiscountId);
+
+                    if (userUsage != null)
+                    {
+                        userUsage.UsedCount++;
+                        userUsage.LastUsedAt = DateTime.Now;
+                    }
+                    else
+                    {
+                        _context.Userdiscountusages.Add(new Userdiscountusage
+                        {
+                            UserId     = finalUserId,
+                            DiscountId = discount.DiscountId,
+                            UsedCount  = 1,
+                            LastUsedAt = DateTime.Now
+                        });
+                    }
                     await _context.SaveChangesAsync();
                 }
+
+                await transaction.CommitAsync(); // ✅ Commit toàn bộ khi không có lỗi
+
+                return (true, ValidationMessages.CreateBookingSuccess, newBookingIds);
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync(); // ❌ Rollback nếu bất kỳ bước nào lỗi
                 Console.WriteLine(ValidationMessages.ErrorAutoTicket + ex.Message);
+                return (false, ValidationMessages.BookingMessages.CreateBookingFailed, emptyList);
             }
-
-            return (true, ValidationMessages.CreateBookingSuccess, resultBookingId);
         }
 
-        //   Gọi Stored Procedure SP_CANCEL_BOOKING để hoàn trả ghế trống và hủy vé tự động
+        // Hủy đơn đặt vé — xóa vật lý, ghế tự động được giải phóng
         public async Task<(bool IsSuccess, string Message)> CancelBookingAsync(int bookingId, int currentUserId, string currentRole)
         {
             var booking = await _context.Bookings.FindAsync(bookingId);
             if (booking == null)
                 return (false, ValidationMessages.BookingNotFoundWithId(bookingId));
 
-            // Bảo mật: Khách hàng chỉ được quyền tự hủy đơn của chính mình
+            // Bảo mật: Khách chỉ được tự hủy đơn của chính mình
             if (currentRole == RoleConstants.Customer && booking.UserId != currentUserId)
                 return (false, ValidationMessages.UnauthorizedBookingCancel);
 
-            // 🔥 THAY VÌ GỌI STORED PROCEDURE ĐỂ ĐỔI STATUS -> TA XÓA SỔ HOÀN TOÀN BẢN GHI KHỎI BẢNG BOOKINGS
             _context.Bookings.Remove(booking);
-            await _context.SaveChangesAsync(); // Ép SQL Server thực thi lệnh DELETE lệnh vật lý
+            await _context.SaveChangesAsync();
 
             return (true, ValidationMessages.CancelBookingSuccess);
         }
     }
 }
-
