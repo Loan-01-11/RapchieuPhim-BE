@@ -287,6 +287,61 @@ namespace RapchieuPhim.API.Constants
         public static string NotFoundWithId(int id) => $"Không tìm thấy combo có ID = {id}.";
     }
 
+    // ── Hằng số dành riêng cho phân hệ Thanh Toán (Payment) ─────────────────────
+    public static class PaymentMessages
+    {
+        // Validation dữ liệu đầu vào
+        public const string BookingIdRequired       = "Vui lòng cung cấp mã đặt vé (BookingId).";
+        public const string PaymentMethodRequired   = "Vui lòng chọn phương thức thanh toán.";
+        public const string PaymentMethodMaxLength  = "Phương thức thanh toán không được vượt quá 50 ký tự.";
+        public const string StatusRequired          = "Vui lòng cung cấp trạng thái thanh toán.";
+
+        // Phương thức thanh toán hợp lệ
+        public const string MethodCash             = "Cash";
+        public const string MethodQrCode           = "QrCode";
+
+        // Cấu hình ngân hàng nhận thanh toán (VietQR)
+        public const string BankId                 = "TPB"; // Tên viết tắt ngân hàng (VCB, MB, ACB,...)
+        public const string AccountNo              = "15145686888"; // Số tài khoản ngân hàng nhận tiền
+        public const string AccountName            = "Nguyen Quang Vinh"; // Tên chủ tài khoản ngân hàng
+        public const string QrTemplate             = "compact"; // Template hiển thị (compact, qr_only, print)
+
+        // Trạng thái thanh toán hợp lệ
+        public const string StatusPending          = "Pending";
+        public const string StatusSuccess          = "Success";
+        public const string StatusFailed           = "Failed";
+        public const string StatusRefunded         = "Refunded";
+
+        // Validation nghiệp vụ
+        public const string AlreadyPaid            = "Đơn đặt vé này đã được thanh toán thành công trước đó.";
+        public const string OrderBookingMismatch   = "Đơn hàng đồ ăn này không thuộc về đơn đặt vé đã cung cấp.";
+        public const string CannotUpdateRefunded   = "Không thể cập nhật trạng thái giao dịch đã hoàn tiền.";
+        public const string InvalidStatus          = "Trạng thái thanh toán không hợp lệ. Chỉ chấp nhận: Pending | Success | Failed | Refunded.";
+
+        // Phân quyền
+        public const string UnauthorizedPayment    = "Bạn không có quyền thanh toán cho đơn đặt vé này.";
+        public const string UnauthorizedStatusChange = "Quyền hạn bị từ chối! Chỉ Admin và Staff mới được cập nhật trạng thái thanh toán.";
+
+        // Thành công
+        public const string CreateSuccess          = "Tạo giao dịch thanh toán thành công!";
+        public const string UpdateStatusSuccess    = "Cập nhật trạng thái thanh toán thành công!";
+
+        // Hàm trả về thông báo động
+        public static string NotFoundWithId(int id)
+            => $"Không tìm thấy giao dịch thanh toán có ID = {id}.";
+        public static string BookingNotFoundForPayment(int bookingId)
+            => $"Không tìm thấy đơn đặt vé có ID = {bookingId} để thanh toán.";
+        public static string OrderNotFoundForPayment(int orderId)
+            => $"Không tìm thấy đơn hàng đồ ăn có ID = {orderId}.";
+
+        // Tạo URL ảnh mã VietQR tự động
+        public static string GenerateVietQrUrl(decimal amount, int bookingId)
+        {
+            string description = $"THANH TOAN VE CP DAT VE {bookingId}";
+            return $"https://img.vietqr.io/image/{BankId}-{AccountNo}-{QrTemplate}.png?amount={amount:0}&addInfo={Uri.EscapeDataString(description)}&accountName={Uri.EscapeDataString(AccountName)}";
+        }
+    }
+
     // ── Hằng số dành riêng cho phân hệ Quản lý Ghế (Seat) ──────────────────
     public static class SeatMessages
     {
