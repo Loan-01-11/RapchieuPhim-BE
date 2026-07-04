@@ -12,7 +12,7 @@ namespace RapchieuPhim.API.Services
         Task<BookingDetailResponse?> GetDetailByIdAsync(int id);
         Task<(bool IsSuccess, string Message, List<BookingDetailResponse>? Data)> GetHistoryByUserAsync(int userId, int currentUserId, string currentRole);
         Task<List<AvailableSeatResponse>> GetAvailableSeatsAsync(int showTimeId);
-        Task<(bool IsSuccess, string Message, List<int> BookingIds)> CreateBookingAsync(BookingCreateRequest request, int currentUserId, string currentRole);
+        Task<(bool IsSuccess, string Message, BookingSummaryResponse? Data)> CreateBookingAsync(BookingCreateRequest request, int currentUserId, string currentRole);
         Task<(bool IsSuccess, string Message)> CancelBookingAsync(int bookingId, int currentUserId, string currentRole);
     }
 
@@ -129,15 +129,13 @@ namespace RapchieuPhim.API.Services
                 }).ToListAsync();
         }
 
-        // ─── TẠO ĐƠN ĐẶT VÉ NHIỀU GHẾ + ÁP MÃ GIẢM GIÁ (xử lý trong C# với Transaction) ───
-        public async Task<(bool IsSuccess, string Message, List<int> BookingIds)> CreateBookingAsync(
+        // ─── TẠO ĐƠN ĐẶT VÉ NHIỀU GHẾ + ĐỒ ĂN/COMBO + ÁP MÃ GIẢM GIÁ ──────────────
+        public async Task<(bool IsSuccess, string Message, BookingSummaryResponse? Data)> CreateBookingAsync(
             BookingCreateRequest request, int currentUserId, string currentRole)
         {
-            var emptyList = new List<int>();
-
-            // ── BƯỚC 1: Kiểm tra danh sách ghế không được trùng nhau ──────────────
+            // ── BƯỚC 1: Kiểm tra danh sách ghế không trùng nhau ──────────────────
             if (request.SeatIds.Distinct().Count() != request.SeatIds.Count)
-                return (false, ValidationMessages.BookingMessages.DuplicateSeatIds, emptyList);
+                return (false, ValidationMessages.BookingMessages.DuplicateSeatIds, null);
 
             // ── BƯỚC 2: Xác định UserId & StaffId ────────────────────────────────
             int  finalUserId = currentUserId;
@@ -146,7 +144,7 @@ namespace RapchieuPhim.API.Services
             if (request.BookingType.Trim() == ValidationMessages.Counter)
             {
                 if (currentRole != RoleConstants.Admin && currentRole != RoleConstants.Staff)
-                    return (false, ValidationMessages.OnlyStaffCanCreateCounterBooking, emptyList);
+                    return (false, ValidationMessages.OnlyStaffCanCreateCounterBooking, null);
 
                 finalUserId = (request.TargetUserId == null || request.TargetUserId == 0)
                               ? currentUserId
@@ -154,27 +152,61 @@ namespace RapchieuPhim.API.Services
                 staffId = currentUserId;
             }
 
-            // ── BƯỚC 3: Kiểm tra Suất chiếu tồn tại ─────────────────────────────
+            // ── BƯỚC 3: Validate & Load dữ liệu OrderItems trước khi bắt đầu Transaction
+            var preparedOrderItems = new List<(int? FoodId, int? ComboId, string Name, decimal UnitPrice, int Qty)>();
+
+            if (request.OrderItems != null && request.OrderItems.Any())
+            {
+                foreach (var item in request.OrderItems)
+                {
+                    // Phải có đúng 1 trong 2: FoodId hoặc ComboId
+                    if (item.FoodId == null && item.ComboId == null)
+                        return (false, ValidationMessages.BookingMessages.FoodOrComboRequired, null);
+                    if (item.FoodId != null && item.ComboId != null)
+                        return (false, ValidationMessages.BookingMessages.FoodOrComboNotBoth, null);
+
+                    if (item.FoodId != null)
+                    {
+                        var food = await _context.Foods.FindAsync(item.FoodId.Value);
+                        if (food == null)
+                            return (false, FoodMessages.NotFoundWithId(item.FoodId.Value), null);
+                        if (!food.IsAvailable || food.Quantity < item.Quantity)
+                            return (false, ValidationMessages.BookingMessages.FoodOrComboUnavailable, null);
+
+                        preparedOrderItems.Add((item.FoodId, null, food.FoodName, food.Price, item.Quantity));
+                    }
+                    else
+                    {
+                        var combo = await _context.Combos.FindAsync(item.ComboId!.Value);
+                        if (combo == null)
+                            return (false, ComboMessages.NotFoundWithId(item.ComboId.Value), null);
+                        if (!combo.IsAvailable || combo.Quantity < item.Quantity)
+                            return (false, ValidationMessages.BookingMessages.FoodOrComboUnavailable, null);
+
+                        preparedOrderItems.Add((null, item.ComboId, combo.ComboName, combo.Price, item.Quantity));
+                    }
+                }
+            }
+
+            // ── BƯỚC 4: Kiểm tra Suất chiếu & Ghế ───────────────────────────────
             var showtime = await _context.Showtimes
                 .Include(s => s.Room)
                 .FirstOrDefaultAsync(s => s.ShowTimeId == request.ShowTimeId);
             if (showtime == null)
-                return (false, ShowtimeMessages.NotFoundWithId(request.ShowTimeId), emptyList);
+                return (false, ShowtimeMessages.NotFoundWithId(request.ShowTimeId), null);
 
-            // ── BƯỚC 4: Kiểm tra tất cả ghế tồn tại ─────────────────────────────
             var seats = await _context.Seats
                 .Where(s => request.SeatIds.Contains(s.SeatId))
                 .ToListAsync();
 
             if (seats.Count != request.SeatIds.Count)
             {
-                // Tìm ghế nào không tồn tại để báo lỗi cụ thể
                 var foundIds  = seats.Select(s => s.SeatId).ToHashSet();
                 var missingId = request.SeatIds.First(id => !foundIds.Contains(id));
-                return (false, ValidationMessages.SeatNotFoundWithId(missingId), emptyList);
+                return (false, ValidationMessages.SeatNotFoundWithId(missingId), null);
             }
 
-            // ── BƯỚC 5: Kiểm tra không có ghế nào đã bị đặt ──────────────────────
+            // ── BƯỚC 5: Kiểm tra không có ghế nào đã bị đặt ─────────────────────
             var takenSeatIds = await _context.Bookings
                 .Where(b => b.ShowTimeId == request.ShowTimeId
                          && request.SeatIds.Contains(b.SeatId)
@@ -183,7 +215,7 @@ namespace RapchieuPhim.API.Services
                 .ToListAsync();
 
             if (takenSeatIds.Any())
-                return (false, ValidationMessages.BookingMessages.SeatsAlreadyBooked(takenSeatIds), emptyList);
+                return (false, ValidationMessages.BookingMessages.SeatsAlreadyBooked(takenSeatIds), null);
 
             // ── BƯỚC 6: Lấy giá vé từ TicketPricing ─────────────────────────────
             var    today   = DateOnly.FromDateTime(DateTime.Now);
@@ -191,14 +223,13 @@ namespace RapchieuPhim.API.Services
                              DateTime.Now.DayOfWeek == DayOfWeek.Sunday
                              ? "Weekend" : "Weekday";
 
-            // ── BƯỚC 7: Xử lý mã giảm giá (áp 1 lần cho toàn bộ đơn) ────────────
+            // ── BƯỚC 7: Xử lý mã giảm giá ────────────────────────────────────────
             decimal   totalDiscountAmt = 0;
             int?      discountId       = null;
             Discount? discount         = null;
 
             if (!string.IsNullOrWhiteSpace(request.DiscountCode))
             {
-                // 7a. Tìm mã trong DB
                 discount = await _context.Discounts
                     .FirstOrDefaultAsync(d =>
                         d.DiscountCode == request.DiscountCode.Trim().ToUpper() &&
@@ -207,18 +238,16 @@ namespace RapchieuPhim.API.Services
                         (d.EndDate == null || d.EndDate >= DateTime.Now));
 
                 if (discount == null)
-                    return (false, DiscountMessages.InvalidOrExpiredCode, emptyList);
+                    return (false, DiscountMessages.InvalidOrExpiredCode, null);
 
-                // 7b. Kiểm tra mã còn lượt dùng tổng
                 if (discount.MaxUsageTotal.HasValue && discount.UsedCount >= discount.MaxUsageTotal.Value)
-                    return (false, ValidationMessages.BookingMessages.DiscountMaxUsageReached, emptyList);
+                    return (false, ValidationMessages.BookingMessages.DiscountMaxUsageReached, null);
 
-                // 7c. Kiểm tra lượt dùng của riêng user này
                 var userUsage    = await _context.Userdiscountusages
                     .FirstOrDefaultAsync(u => u.UserId == finalUserId && u.DiscountId == discount.DiscountId);
                 int userUsedCount = userUsage?.UsedCount ?? 0;
                 if (userUsedCount >= discount.MaxUsagePerUser)
-                    return (false, ValidationMessages.BookingMessages.DiscountUserLimitReached, emptyList);
+                    return (false, ValidationMessages.BookingMessages.DiscountUserLimitReached, null);
 
                 discountId = discount.DiscountId;
             }
@@ -227,17 +256,13 @@ namespace RapchieuPhim.API.Services
             await using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                var newBookingIds = new List<int>();
+                var newBookingIds     = new List<int>();
+                decimal ticketTotal   = 0; // Tổng tiền vé (trước giảm giá)
+                var createdBookings   = new List<(Booking Booking, decimal TicketPrice)>();
 
-                // Tổng giá trước giảm (dùng để kiểm tra MinOrderAmount và tính giảm theo %)
-                decimal grandTotal = 0;
-
-                // Danh sách booking đã tạo (để tính discount sau)
-                var createdBookings = new List<(Booking Booking, decimal TicketPrice)>();
-
+                // 8a. Tính giá và tạo Booking cho từng ghế
                 foreach (var seat in seats)
                 {
-                    // Lấy giá vé riêng cho từng ghế (mỗi ghế có SeatType khác nhau)
                     var pricing = await _context.Ticketpricings
                         .Where(p => p.IsActive
                                  && (p.RoomType == null || p.RoomType == showtime.Room.RoomType)
@@ -249,60 +274,55 @@ namespace RapchieuPhim.API.Services
                         .FirstOrDefaultAsync();
 
                     if (pricing == null)
-                        return (false, ValidationMessages.BookingMessages.PricingNotFound, emptyList);
+                        return (false, ValidationMessages.BookingMessages.PricingNotFound, null);
 
-                    grandTotal += pricing.Price;
+                    ticketTotal += pricing.Price;
                     createdBookings.Add((new Booking
                     {
                         UserId      = finalUserId,
                         ShowTimeId  = request.ShowTimeId,
                         SeatId      = seat.SeatId,
-                        DiscountId  = null,          // Gán discount sau khi tính xong
+                        DiscountId  = null,
                         BookingDate = DateTime.Now,
                         TicketPrice = pricing.Price,
-                        DiscountAmt = 0,             // Cập nhật sau
-                        TotalAmount = pricing.Price, // Cập nhật sau
+                        DiscountAmt = 0,
+                        TotalAmount = pricing.Price,
                         BookingType = request.BookingType.Trim(),
                         StaffId     = staffId,
                         Status      = ValidationMessages.StutusComfirmed
                     }, pricing.Price));
                 }
 
-                // Tính discount sau khi biết tổng giá
+                // 8b. Tính và phân bổ discount vào từng vé
                 if (discount != null)
                 {
-                    // 8a. Kiểm tra tổng đơn đạt MinOrderAmount
-                    if (grandTotal < discount.MinOrderAmount)
-                        return (false, ValidationMessages.BookingMessages.OrderBelowMinAmount(discount.MinOrderAmount), emptyList);
+                    if (ticketTotal < discount.MinOrderAmount)
+                        return (false, ValidationMessages.BookingMessages.OrderBelowMinAmount(discount.MinOrderAmount), null);
 
-                    // 8b. Tính tổng số tiền giảm cho toàn bộ đơn
                     totalDiscountAmt = discount.DiscountType == DiscountMessages.TypePercent
-                        ? Math.Round(grandTotal * discount.DiscountValue / 100, 0)
+                        ? Math.Round(ticketTotal * discount.DiscountValue / 100, 0)
                         : discount.DiscountValue;
+                    totalDiscountAmt = Math.Min(totalDiscountAmt, ticketTotal);
 
-                    totalDiscountAmt = Math.Min(totalDiscountAmt, grandTotal);
-
-                    // 8c. Phân bổ discount đều ra các booking (ghế cuối cùng nhận phần dư lẻ)
                     decimal discountPerSeat = Math.Floor(totalDiscountAmt / seats.Count);
                     decimal remainder       = totalDiscountAmt - discountPerSeat * seats.Count;
 
                     for (int i = 0; i < createdBookings.Count; i++)
                     {
-                        decimal thisDiscount  = discountPerSeat + (i == createdBookings.Count - 1 ? remainder : 0);
-                        var (booking, price)  = createdBookings[i];
-                        booking.DiscountId    = discountId;
-                        booking.DiscountAmt   = thisDiscount;
-                        booking.TotalAmount   = price - thisDiscount;
+                        decimal thisDiscount     = discountPerSeat + (i == createdBookings.Count - 1 ? remainder : 0);
+                        var (booking, price)     = createdBookings[i];
+                        booking.DiscountId       = discountId;
+                        booking.DiscountAmt      = thisDiscount;
+                        booking.TotalAmount      = price - thisDiscount;
                     }
                 }
 
-                // 8d. Lưu tất cả Booking vào DB
+                // 8c. Lưu từng Booking + Ticket vào DB
                 foreach (var (booking, _) in createdBookings)
                 {
                     _context.Bookings.Add(booking);
-                    await _context.SaveChangesAsync(); // Cần BookingId để tạo Ticket
+                    await _context.SaveChangesAsync();
 
-                    // Cấp Ticket tự động kèm QR Code
                     string ticketCode = "TIC" + Guid.NewGuid().ToString().Replace("-", "").Substring(0, 7).ToUpper();
                     _context.Tickets.Add(new Ticket
                     {
@@ -314,18 +334,15 @@ namespace RapchieuPhim.API.Services
                         Status     = ShowtimeMessages.StatusActive
                     });
                     await _context.SaveChangesAsync();
-
                     newBookingIds.Add(booking.BookingId);
                 }
 
-                // 8e. Cập nhật thống kê sử dụng mã giảm giá (1 lần duy nhất)
+                // 8d. Cập nhật thống kê mã giảm giá
                 if (discount != null)
                 {
                     discount.UsedCount++;
-
                     var userUsage = await _context.Userdiscountusages
                         .FirstOrDefaultAsync(u => u.UserId == finalUserId && u.DiscountId == discount.DiscountId);
-
                     if (userUsage != null)
                     {
                         userUsage.UsedCount++;
@@ -344,15 +361,98 @@ namespace RapchieuPhim.API.Services
                     await _context.SaveChangesAsync();
                 }
 
-                await transaction.CommitAsync(); // ✅ Commit toàn bộ khi không có lỗi
+                // ── BƯỚC 9: Tạo Order + OrderItems nếu khách có đặt đồ ăn ───────
+                decimal foodTotal  = 0;
+                int?    newOrderId = null;
+                var     orderItemResponses = new List<OrderItemSummary>();
 
-                return (true, ValidationMessages.CreateBookingSuccess, newBookingIds);
+                if (preparedOrderItems.Any())
+                {
+                    // Lấy BookingId đầu tiên để liên kết Order với Booking
+                    var order = new Order
+                    {
+                        UserId      = finalUserId,
+                        BookingId   = newBookingIds.FirstOrDefault(),
+                        StaffId     = staffId,
+                        OrderDate   = DateTime.Now,
+                        TotalAmount = 0,        // Cập nhật sau khi tính xong
+                        OrderType   = request.BookingType.Trim(),
+                        Status      = ValidationMessages.StutusComfirmed
+                    };
+                    _context.Orders.Add(order);
+                    await _context.SaveChangesAsync(); // Lấy OrderId
+
+                    foreach (var (foodId, comboId, name, unitPrice, qty) in preparedOrderItems)
+                    {
+                        decimal subtotal = unitPrice * qty;
+                        foodTotal += subtotal;
+
+                        _context.Orderitems.Add(new Orderitem
+                        {
+                            OrderId   = order.OrderId,
+                            FoodId    = foodId,
+                            ComboId   = comboId,
+                            Quantity  = qty,
+                            UnitPrice = unitPrice,
+                            Subtotal  = subtotal
+                        });
+
+                        // Giảm tồn kho
+                        if (foodId != null)
+                        {
+                            var food = await _context.Foods.FindAsync(foodId.Value);
+                            if (food != null) food.Quantity -= qty;
+                        }
+                        else if (comboId != null)
+                        {
+                            var combo = await _context.Combos.FindAsync(comboId.Value);
+                            if (combo != null) combo.Quantity -= qty;
+                        }
+
+                        orderItemResponses.Add(new OrderItemSummary
+                        {
+                            Name      = name,
+                            FoodId    = foodId,
+                            ComboId   = comboId,
+                            UnitPrice = unitPrice,
+                            Quantity  = qty,
+                            Subtotal  = subtotal
+                        });
+                    }
+
+                    order.TotalAmount = foodTotal;
+                    await _context.SaveChangesAsync();
+                    newOrderId = order.OrderId;
+                }
+
+                await transaction.CommitAsync(); // ✅ Commit toàn bộ
+
+                // ── BƯỚC 10: Tổng hợp response ────────────────────────────────────
+                decimal ticketAfterDiscount = ticketTotal - totalDiscountAmt;
+                decimal grandTotal          = ticketAfterDiscount + foodTotal;
+
+                var summary = new BookingSummaryResponse
+                {
+                    BookingIds      = newBookingIds,
+                    OrderId         = newOrderId,
+
+                    TicketTotal     = ticketTotal,
+                    DiscountAmt     = totalDiscountAmt,
+                    TicketAfterDiscount = ticketAfterDiscount,
+
+                    FoodTotal       = foodTotal,
+                    OrderItems      = orderItemResponses,
+
+                    GrandTotal      = grandTotal
+                };
+
+                return (true, ValidationMessages.CreateBookingSuccess, summary);
             }
             catch (Exception ex)
             {
-                await transaction.RollbackAsync(); // ❌ Rollback nếu bất kỳ bước nào lỗi
+                await transaction.RollbackAsync();
                 Console.WriteLine(ValidationMessages.ErrorAutoTicket + ex.Message);
-                return (false, ValidationMessages.BookingMessages.CreateBookingFailed, emptyList);
+                return (false, ValidationMessages.BookingMessages.CreateBookingFailed, null);
             }
         }
 
@@ -363,7 +463,6 @@ namespace RapchieuPhim.API.Services
             if (booking == null)
                 return (false, ValidationMessages.BookingNotFoundWithId(bookingId));
 
-            // Bảo mật: Khách chỉ được tự hủy đơn của chính mình
             if (currentRole == RoleConstants.Customer && booking.UserId != currentUserId)
                 return (false, ValidationMessages.UnauthorizedBookingCancel);
 

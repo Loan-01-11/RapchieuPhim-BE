@@ -22,5 +22,19 @@ namespace RapchieuPhim.API.DTO.DTORequest
 
         // Dùng khi nhân viên bán vé hộ tại quầy, nếu Online thì tự động bóc từ Token
         public int? TargetUserId { get; set; }
+
+        // Danh sách đồ ăn / combo muốn đặt kèm (không bắt buộc)
+        public List<OrderItemRequest>? OrderItems { get; set; }
+    }
+
+    // ─── Một dòng đồ ăn/combo trong đơn hàng ─────────────────────────────────────
+    public class OrderItemRequest
+    {
+        // Chỉ được điền 1 trong 2: FoodId HOẶC ComboId
+        public int? FoodId { get; set; }
+        public int? ComboId { get; set; }
+
+        [Range(1, 50, ErrorMessage = ValidationMessages.BookingMessages.OrderItemQuantityInvalid)]
+        public int Quantity { get; set; } = 1;
     }
 }

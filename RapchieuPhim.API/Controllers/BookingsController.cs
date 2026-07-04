@@ -79,18 +79,12 @@ namespace RapchieuPhim.API.Controllers
             var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
             var currentRole = User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
 
-            // 🌟 SỬA ĐÒNG NÀY: Đổi .CreateAsync thành .CreateBookingAsync
-            var result = await _bookingService.CreateBookingAsync(request, currentUserId, currentRole);
+            var (isSuccess, message, data) = await _bookingService.CreateBookingAsync(request, currentUserId, currentRole);
 
-            if (!result.IsSuccess)
-                return BadRequest(new { Message = result.Message });
+            if (!isSuccess)
+                return BadRequest(new { Message = message });
 
-            return Ok(new
-            {
-                Message    = result.Message,
-                BookingIds = result.BookingIds,
-                Count      = result.BookingIds.Count
-            });
+            return Ok(new { Message = message, Data = data });
         }
 
         // DELETE: api/Bookings/{id} 🛡️ (HỦY ĐƠN VÉ - Sử dụng Stored Procedure an toàn đa tầng)

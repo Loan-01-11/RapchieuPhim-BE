@@ -212,6 +212,10 @@ namespace RapchieuPhim.API.Constants
             public const string PricingNotFound          = "Không tìm thấy cấu hình giá vé phù hợp với loại phòng và loại ghế này.";
             public const string SeatIdsMinLength         = "Vui lòng chọn ít nhất 1 ghế.";
             public const string SeatIdsMaxLength         = "Chỉ được đặt tối đa 10 ghế mỗi lần.";
+            public const string OrderItemQuantityInvalid = "Số lượng mỗi món phải từ 1 đến 50.";
+            public const string FoodOrComboRequired      = "Mỗi dòng order phải có FoodId hoặc ComboId.";
+            public const string FoodOrComboNotBoth       = "Mỗi dòng order chỉ được chọn 1 trong 2: FoodId hoặc ComboId.";
+            public const string FoodOrComboUnavailable   = "Món ăn hoặc combo này hiện không còn phục vụ.";
 
             public static string OrderBelowMinAmount(decimal minAmount)
                 => $"Giá trị đơn hàng chưa đạt mức tối thiểu {minAmount:N0} VNĐ để áp dụng mã giảm giá.";
@@ -221,6 +225,67 @@ namespace RapchieuPhim.API.Constants
         }
     }
 
+
+    // ── Hằng số dành riêng cho phân hệ Quản lý Thực Đơn (Food) ─────────────────
+    public static class FoodMessages
+    {
+        // Validation dữ liệu đầu vào
+        public const string FoodNameRequired     = "Tên món ăn không được để trống.";
+        public const string FoodNameMaxLength    = "Tên món ăn không được vượt quá 150 ký tự.";
+        public const string CategoryMaxLength    = "Danh mục không được vượt quá 50 ký tự.";
+        public const string PriceInvalid         = "Giá món ăn không được âm.";
+        public const string QuantityInvalid      = "Số lượng không được âm.";
+
+        // Validation nghiệp vụ
+        public const string FoodNameAlreadyExists  = "Tên món ăn này đã tồn tại trong cùng danh mục.";
+        public const string CannotDeleteUsedFood   = "Không thể xóa món ăn đã có lịch sử trong đơn hàng.";
+
+        // Phân quyền
+        public const string UnauthorizedUpdate   = "Quyền hạn bị từ chối! Chỉ Admin tối cao mới có quyền chỉnh sửa thực đơn.";
+
+        // Thành công
+        public const string CreateSuccess        = "Thêm món ăn mới thành công!";
+        public const string UpdateSuccess        = "Cập nhật thông tin món ăn thành công!";
+        public const string DeleteSuccess        = "Xóa món ăn thành công!";
+        public const string ConcurrencyError     = "Dữ liệu món ăn đã bị thay đổi bởi một luồng khác, vui lòng thử lại.";
+
+        // Hàm trả về thông báo chứa ID động
+        public static string NotFoundWithId(int id) => $"Không tìm thấy món ăn có ID = {id}.";
+    }
+
+    // ── Hằng số dành riêng cho phân hệ Quản lý Combo ────────────────────────────
+    public static class ComboMessages
+    {
+        // Validation dữ liệu đầu vào
+        public const string ComboNameRequired      = "Tên combo không được để trống.";
+        public const string ComboNameMaxLength     = "Tên combo không được vượt quá 150 ký tự.";
+        public const string DescriptionMaxLength   = "Mô tả combo không được vượt quá 500 ký tự.";
+        public const string PriceInvalid           = "Giá combo không được âm.";
+        public const string QuantityInvalid        = "Số lượng combo không được âm.";
+        public const string FoodIdRequired         = "Vui lòng chọn món ăn để thêm vào combo.";
+        public const string FoodQuantityInvalid    = "Số lượng món trong combo phải từ 1 đến 100.";
+
+        // Validation nghiệp vụ
+        public const string ComboNameAlreadyExists = "Tên combo này đã tồn tại.";
+        public const string CannotDeleteUsedCombo  = "Không thể xóa combo đã có lịch sử trong đơn hàng.";
+        public const string FoodAlreadyInCombo     = "Món ăn này đã có trong combo, vui lòng cập nhật số lượng.";
+        public const string FoodNotInCombo         = "Không tìm thấy món ăn này trong combo.";
+
+        // Phân quyền
+        public const string UnauthorizedModify     = "Quyền hạn bị từ chối! Chỉ Admin tối cao mới có quyền chỉnh sửa combo.";
+
+        // Thành công
+        public const string CreateSuccess          = "Tạo combo mới thành công!";
+        public const string UpdateSuccess          = "Cập nhật thông tin combo thành công!";
+        public const string DeleteSuccess          = "Xóa combo thành công!";
+        public const string AddFoodSuccess         = "Thêm món vào combo thành công!";
+        public const string RemoveFoodSuccess      = "Xóa món khỏi combo thành công!";
+        public const string UpdateFoodQuantitySuccess = "Cập nhật số lượng món trong combo thành công!";
+        public const string ConcurrencyError       = "Dữ liệu combo đã bị thay đổi bởi một luồng khác, vui lòng thử lại.";
+
+        // Hàm trả về thông báo chứa ID động
+        public static string NotFoundWithId(int id) => $"Không tìm thấy combo có ID = {id}.";
+    }
 
     // ── Hằng số dành riêng cho phân hệ Quản lý Ghế (Seat) ──────────────────
     public static class SeatMessages
