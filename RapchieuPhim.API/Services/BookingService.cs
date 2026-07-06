@@ -153,13 +153,15 @@ namespace RapchieuPhim.API.Services
             }
 
             // ── BƯỚC 3: Validate & Load dữ liệu OrderItems trước khi bắt đầu Transaction
+            // [NOTE]: Bước này lọc và kiểm tra tính hợp lệ của các mặt hàng ăn uống (Food/Combo) khách đặt kèm.
+            // Đảm bảo không chọn trống cả hai, không chọn cả hai cùng lúc, còn hàng trong kho và đang hoạt động kinh doanh.
             var preparedOrderItems = new List<(int? FoodId, int? ComboId, string Name, decimal UnitPrice, int Qty)>();
 
             if (request.OrderItems != null && request.OrderItems.Any())
             {
                 foreach (var item in request.OrderItems)
                 {
-                    // Phải có đúng 1 trong 2: FoodId hoặc ComboId
+                    // [NOTE]: Kiểm tra xem item chỉ thuộc 1 trong 2: Hoặc FoodId hoặc ComboId, không thể để trống hoặc chọn cả hai
                     if (item.FoodId == null && item.ComboId == null)
                         return (false, ValidationMessages.BookingMessages.FoodOrComboRequired, null);
                     if (item.FoodId != null && item.ComboId != null)
@@ -167,9 +169,11 @@ namespace RapchieuPhim.API.Services
 
                     if (item.FoodId != null)
                     {
+                        // [NOTE]: Kiểm tra món ăn đơn lẻ (Food) trong Database
                         var food = await _context.Foods.FindAsync(item.FoodId.Value);
                         if (food == null)
                             return (false, FoodMessages.NotFoundWithId(item.FoodId.Value), null);
+                        // [NOTE]: Đảm bảo món ăn còn kinh doanh (IsAvailable) và đủ tồn kho (Quantity >= số lượng mua)
                         if (!food.IsAvailable || food.Quantity < item.Quantity)
                             return (false, ValidationMessages.BookingMessages.FoodOrComboUnavailable, null);
 
@@ -177,9 +181,11 @@ namespace RapchieuPhim.API.Services
                     }
                     else
                     {
+                        // [NOTE]: Kiểm tra gói Combo trong Database
                         var combo = await _context.Combos.FindAsync(item.ComboId!.Value);
                         if (combo == null)
                             return (false, ComboMessages.NotFoundWithId(item.ComboId.Value), null);
+                        // [NOTE]: Đảm bảo combo còn kinh doanh và đủ số lượng trong kho
                         if (!combo.IsAvailable || combo.Quantity < item.Quantity)
                             return (false, ValidationMessages.BookingMessages.FoodOrComboUnavailable, null);
 
@@ -189,6 +195,7 @@ namespace RapchieuPhim.API.Services
             }
 
             // ── BƯỚC 4: Kiểm tra Suất chiếu & Ghế ───────────────────────────────
+            // [NOTE]: Lấy thông tin chi tiết của suất chiếu và toàn bộ danh sách ghế mà khách hàng yêu cầu
             var showtime = await _context.Showtimes
                 .Include(s => s.Room)
                 .FirstOrDefaultAsync(s => s.ShowTimeId == request.ShowTimeId);
@@ -199,6 +206,7 @@ namespace RapchieuPhim.API.Services
                 .Where(s => request.SeatIds.Contains(s.SeatId))
                 .ToListAsync();
 
+            // [NOTE]: Đảm bảo tìm đủ số lượng ghế trong Database tương ứng với số lượng ID gửi lên
             if (seats.Count != request.SeatIds.Count)
             {
                 var foundIds  = seats.Select(s => s.SeatId).ToHashSet();
@@ -207,10 +215,12 @@ namespace RapchieuPhim.API.Services
             }
 
             // ── BƯỚC 5: Kiểm tra không có ghế nào đã bị đặt ─────────────────────
+            // [NOTE]: Kiểm tra xem có ghế nào trong số các ghế yêu cầu đã bị đặt trước đó cho suất chiếu này chưa
+            // Chỉ loại trừ các booking có trạng thái là đã hủy "Cancelled"
             var takenSeatIds = await _context.Bookings
                 .Where(b => b.ShowTimeId == request.ShowTimeId
                          && request.SeatIds.Contains(b.SeatId)
-                         && b.Status != "Cancelled")
+                         && b.Status != ShowtimeMessages.StatusCancelled)
                 .Select(b => b.SeatId)
                 .ToListAsync();
 
@@ -218,16 +228,20 @@ namespace RapchieuPhim.API.Services
                 return (false, ValidationMessages.BookingMessages.SeatsAlreadyBooked(takenSeatIds), null);
 
             // ── BƯỚC 6: Lấy giá vé từ TicketPricing ─────────────────────────────
+            // [NOTE]: Xác định ngày đặt vé là Ngày thường (Weekday) hay Cuối tuần (Weekend) để tính giá
             var    today   = DateOnly.FromDateTime(DateTime.Now);
             string dayType = DateTime.Now.DayOfWeek == DayOfWeek.Saturday ||
                              DateTime.Now.DayOfWeek == DayOfWeek.Sunday
                              ? "Weekend" : "Weekday";
 
             // ── BƯỚC 7: Xử lý mã giảm giá ────────────────────────────────────────
-            decimal   totalDiscountAmt = 0;
-            int?      discountId       = null;
-            Discount? discount         = null;
+            // [NOTE]: Xác thực mã giảm giá (DiscountCode) nếu khách hàng có áp dụng
+            decimal   totalDiscountAmt = 0; //Biến lưu tổng số tiền sẽ được giảm giá (mặc định ban đầu là 0 đồng).
+            int?      discountId       = null;//Biến lưu ID của mã giảm giá (dùng kiểu int? để có thể nhận giá trị null nếu khách không áp mã).
+            Discount? discount         = null;//Biến dùng để chứa toàn bộ thông tin của mã giảm giá lấy từ Database lên.
 
+            //Kiểm tra xem khách hàng có nhập mã giảm giá hay không.
+            //Hàm IsNullOrWhiteSpace sẽ kiểm tra xem chuỗi có bị null, rỗng "" hoặc chỉ toàn dấu cách "   " hay không
             if (!string.IsNullOrWhiteSpace(request.DiscountCode))
             {
                 discount = await _context.Discounts
@@ -240,12 +254,14 @@ namespace RapchieuPhim.API.Services
                 if (discount == null)
                     return (false, DiscountMessages.InvalidOrExpiredCode, null);
 
+                // [NOTE]: Kiểm tra xem mã giảm giá đã hết lượt dùng tối đa trên toàn hệ thống chưa
                 if (discount.MaxUsageTotal.HasValue && discount.UsedCount >= discount.MaxUsageTotal.Value)
                     return (false, ValidationMessages.BookingMessages.DiscountMaxUsageReached, null);
 
+                // [NOTE]: Kiểm tra xem tài khoản khách hàng đã dùng vượt quá số lần giới hạn cho phép chưa
                 var userUsage    = await _context.Userdiscountusages
                     .FirstOrDefaultAsync(u => u.UserId == finalUserId && u.DiscountId == discount.DiscountId);
-                int userUsedCount = userUsage?.UsedCount ?? 0;
+                int userUsedCount = userUsage?.UsedCount ?? 0;//?? 0: Toán tử liên kết null. Nếu kết quả bên trái là null, hệ thống sẽ tự động gán giá trị bằng 0.
                 if (userUsedCount >= discount.MaxUsagePerUser)
                     return (false, ValidationMessages.BookingMessages.DiscountUserLimitReached, null);
 
@@ -253,6 +269,8 @@ namespace RapchieuPhim.API.Services
             }
 
             // ── BƯỚC 8: Lưu tất cả trong 1 Transaction ───────────────────────────
+            // [NOTE]: Bắt đầu một Transaction. Nếu có bất kỳ bước lưu dữ liệu nào phía sau bị lỗi (Exception),
+            // toàn bộ các thay đổi trước đó sẽ được tự động rút lại (Rollback), đảm bảo an toàn tuyệt đối cho DB.
             await using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
@@ -264,6 +282,7 @@ namespace RapchieuPhim.API.Services
                 // 8a. Tính giá và tạo Booking cho từng ghế
                 foreach (var seat in seats)
                 {
+                    // [NOTE]: Tìm bảng giá vé khớp với loại phòng chiếu, loại ghế, loại ngày thường/cuối tuần và đang trong thời gian hiệu lực
                     var pricing = await _context.Ticketpricings
                         .Where(p => p.IsActive
                                  && (p.RoomType == null || p.RoomType == showtime.Room.RoomType)
@@ -297,15 +316,20 @@ namespace RapchieuPhim.API.Services
                 // 8b. Tính và phân bổ discount vào từng vé
                 if (discount != null)
                 {
+                    // [NOTE]: Đảm bảo tổng giá trị vé gốc lớn hơn hoặc bằng điều kiện giá trị đơn tối thiểu của mã giảm giá (MinOrderAmount)
                     if (ticketTotal < discount.MinOrderAmount)
                         return (false, ValidationMessages.BookingMessages.OrderBelowMinAmount(discount.MinOrderAmount), null);
 
+                    // [NOTE]: Tính tổng tiền giảm giá (giảm theo % hoặc giảm thẳng số tiền cố định)
                     totalDiscountAmt = discount.DiscountType == DiscountMessages.TypePercent
                         ? Math.Round(ticketTotal * discount.DiscountValue / 100, 0)
                         : discount.DiscountValue;
                     totalDiscountAmt = Math.Min(totalDiscountAmt, ticketTotal);
 
+                    // [NOTE]: Chia đều số tiền được giảm giá cho toàn bộ số ghế đã chọn
+                    //chia tổng số tiền giam giá cho từng ghê 
                     decimal discountPerSeat = Math.Floor(totalDiscountAmt / seats.Count);
+                    //Tính số tiền dư (phần lẻ còn sót lại sau khi làm tròn).
                     decimal remainder       = totalDiscountAmt - discountPerSeat * seats.Count;
 
                     for (int i = 0; i < createdBookings.Count; i++)
@@ -324,6 +348,7 @@ namespace RapchieuPhim.API.Services
                     _context.Bookings.Add(booking);
                     await _context.SaveChangesAsync();
 
+                    // [NOTE]: Sinh TicketCode ngẫu nhiên duy nhất
                     string ticketCode = "TIC" + Guid.NewGuid().ToString().Replace("-", "").Substring(0, 7).ToUpper();
                     _context.Tickets.Add(new Ticket
                     {
@@ -332,7 +357,7 @@ namespace RapchieuPhim.API.Services
                         QrCodeUrl  = null,               // ⏳ Chưa sinh QR — chờ thanh toán thành công
                         Price      = booking.TotalAmount,
                         IssuedAt   = DateTime.Now,
-                        Status     = "Pending"           // Vé chờ xác nhận thanh toán
+                        Status     = PaymentMessages.StatusPending           // Vé chờ xác nhận thanh toán
                     });
                     await _context.SaveChangesAsync();
                     newBookingIds.Add(booking.BookingId);
@@ -341,12 +366,12 @@ namespace RapchieuPhim.API.Services
                 // 8d. Cập nhật thống kê mã giảm giá
                 if (discount != null)
                 {
-                    discount.UsedCount++;
+                    discount.UsedCount++; // Tăng lượt dùng trên toàn hệ thống
                     var userUsage = await _context.Userdiscountusages
                         .FirstOrDefaultAsync(u => u.UserId == finalUserId && u.DiscountId == discount.DiscountId);
                     if (userUsage != null)
                     {
-                        userUsage.UsedCount++;
+                        userUsage.UsedCount++; // Tăng lượt dùng của riêng User này
                         userUsage.LastUsedAt = DateTime.Now;
                     }
                     else
@@ -363,13 +388,13 @@ namespace RapchieuPhim.API.Services
                 }
 
                 // ── BƯỚC 9: Tạo Order + OrderItems nếu khách có đặt đồ ăn ───────
+                // [NOTE]: Tạo và tính toán hóa đơn đồ ăn mua kèm nếu danh sách tạm có dữ liệu
                 decimal foodTotal  = 0;
                 int?    newOrderId = null;
-                var     orderItemResponses = new List<OrderItemSummary>();
+                var     orderItemResponses = new List<OrderItemSummary>();// Danh sách trả về cho Frontend hiển thị
 
                 if (preparedOrderItems.Any())
                 {
-                    // Lấy BookingId đầu tiên để liên kết Order với Booking
                     var order = new Order
                     {
                         UserId      = finalUserId,
@@ -398,7 +423,7 @@ namespace RapchieuPhim.API.Services
                             Subtotal  = subtotal
                         });
 
-                        // Giảm tồn kho
+                        // [NOTE]: Trừ tồn kho (Quantity) trong DB để tránh bán quá lượng tồn
                         if (foodId != null)
                         {
                             var food = await _context.Foods.FindAsync(foodId.Value);
@@ -421,14 +446,17 @@ namespace RapchieuPhim.API.Services
                         });
                     }
 
+                    // [NOTE]: Cập nhật lại tổng tiền thực của hóa đơn ăn uống
                     order.TotalAmount = foodTotal;
                     await _context.SaveChangesAsync();
                     newOrderId = order.OrderId;
                 }
 
-                await transaction.CommitAsync(); // ✅ Commit toàn bộ
+                // [NOTE]: Hoàn tất và ghi nhận toàn bộ dữ liệu xuống database
+                await transaction.CommitAsync(); 
 
-                // ── BƯỚC 10: Tổng hợp response ────────────────────────────────────
+                // ── BƯỚC 10: Tổng hợp dữ liệu phản hồi (Response Summary) ────────────────────────────────────
+                // [NOTE]: Tính tổng tiền vé sau giảm giá và tổng tiền cuối cùng bao gồm đồ ăn (GrandTotal)
                 decimal ticketAfterDiscount = ticketTotal - totalDiscountAmt;
                 decimal grandTotal          = ticketAfterDiscount + foodTotal;
 
@@ -451,13 +479,14 @@ namespace RapchieuPhim.API.Services
             }
             catch (Exception ex)
             {
+                // [NOTE]: Nếu có bất kỳ lỗi nào xảy ra trong Transaction, khôi phục lại dữ liệu ban đầu
                 await transaction.RollbackAsync();
                 Console.WriteLine(ValidationMessages.ErrorAutoTicket + ex.Message);
                 return (false, ValidationMessages.BookingMessages.CreateBookingFailed, null);
             }
         }
 
-        // Hủy đơn đặt vé — xóa vật lý, ghế tự động được giải phóng
+        // Hủy đơn đặt vé — cập nhật trạng thái thành "Cancelled" (Soft Delete) để lưu lịch sử đối soát
         public async Task<(bool IsSuccess, string Message)> CancelBookingAsync(int bookingId, int currentUserId, string currentRole)
         {
             var booking = await _context.Bookings.FindAsync(bookingId);
@@ -467,7 +496,19 @@ namespace RapchieuPhim.API.Services
             if (currentRole == RoleConstants.Customer && booking.UserId != currentUserId)
                 return (false, ValidationMessages.UnauthorizedBookingCancel);
 
-            _context.Bookings.Remove(booking);
+            // [NOTE]: Cập nhật trạng thái Booking thành "Cancelled" để giải phóng ghế nhưng vẫn giữ lại lịch sử
+            booking.Status = ShowtimeMessages.StatusCancelled;
+
+            // [NOTE]: Cập nhật trạng thái toàn bộ vé (Ticket) liên quan của Booking này thành "Cancelled"
+            var tickets = await _context.Tickets
+                .Where(t => t.BookingId == bookingId)
+                .ToListAsync();
+
+            foreach (var ticket in tickets)
+            {
+                ticket.Status = ShowtimeMessages.StatusCancelled;
+            }
+
             await _context.SaveChangesAsync();
 
             return (true, ValidationMessages.CancelBookingSuccess);

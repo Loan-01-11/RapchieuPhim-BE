@@ -149,6 +149,7 @@ namespace RapchieuPhim.API.Services
             decimal total       = batchBookings.Sum(b => b.TotalAmount);
 
             // Bước 5: Cộng thêm tiền đồ ăn nếu có
+            //Kiểm tra xem khách hàng có gửi kèm mã hóa đơn đồ ăn (OrderId) lên cùng đợt thanh toán này hay không. Nếu có, hệ thống mới nhảy vào xử lý khối lệnh bên trong.
             if (request.OrderId.HasValue)
             {
                 var order = await _context.Orders.FindAsync(request.OrderId.Value);
@@ -197,7 +198,7 @@ namespace RapchieuPhim.API.Services
             _context.Payments.Add(payment);
             await _context.SaveChangesAsync();
 
-            return (true, PaymentMessages.CreateSuccess, 201, MapToResponse(payment));
+            return (true, PaymentMessages.CreateSuccess, 201, MapToResponse(payment));  
         }
 
         /// <summary>
