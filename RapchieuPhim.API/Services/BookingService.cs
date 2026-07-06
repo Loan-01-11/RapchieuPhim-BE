@@ -259,6 +259,7 @@ namespace RapchieuPhim.API.Services
                 var newBookingIds     = new List<int>();
                 decimal ticketTotal   = 0; // Tổng tiền vé (trước giảm giá)
                 var createdBookings   = new List<(Booking Booking, decimal TicketPrice)>();
+                var bookingDate       = DateTime.Now; // 🌟 Thời gian đồng nhất cho cả nhóm ghế đặt cùng lúc
 
                 // 8a. Tính giá và tạo Booking cho từng ghế
                 foreach (var seat in seats)
@@ -283,7 +284,7 @@ namespace RapchieuPhim.API.Services
                         ShowTimeId  = request.ShowTimeId,
                         SeatId      = seat.SeatId,
                         DiscountId  = null,
-                        BookingDate = DateTime.Now,
+                        BookingDate = bookingDate, // 🌟 Gán thời gian đồng nhất (dùng để gom nhóm khi thanh toán)
                         TicketPrice = pricing.Price,
                         DiscountAmt = 0,
                         TotalAmount = pricing.Price,
@@ -328,10 +329,10 @@ namespace RapchieuPhim.API.Services
                     {
                         BookingId  = booking.BookingId,
                         TicketCode = ticketCode,
-                        QrCodeUrl  = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" + ticketCode,
+                        QrCodeUrl  = null,               // ⏳ Chưa sinh QR — chờ thanh toán thành công
                         Price      = booking.TotalAmount,
                         IssuedAt   = DateTime.Now,
-                        Status     = ShowtimeMessages.StatusActive
+                        Status     = "Pending"           // Vé chờ xác nhận thanh toán
                     });
                     await _context.SaveChangesAsync();
                     newBookingIds.Add(booking.BookingId);

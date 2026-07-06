@@ -102,5 +102,24 @@ namespace RapchieuPhim.API.Controllers
 
             return Ok(new { Message = message });
         }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // POST: api/Payments/Webhook/Sepay
+        // 🔓 AllowAnonymous — Để Sepay server gọi vào không cần Bearer Token
+        // Khi nhận được: Xác nhận thanh toán → Kích hoạt mã QR vé tự động
+        // ─────────────────────────────────────────────────────────────────────────
+        [HttpPost("Webhook/Sepay")]
+        [AllowAnonymous]
+        public async Task<IActionResult> SepayWebhook([FromBody] SepayWebhookRequest request)
+        {
+            string authHeader = Request.Headers["Authorization"].ToString();
+
+            var (isSuccess, message) = await _paymentService.ProcessSepayWebhookAsync(request, authHeader);
+
+            if (!isSuccess)
+                return BadRequest(new { Success = false, Message = message });
+
+            return Ok(new { Success = true, Message = message });
+        }
     }
 }

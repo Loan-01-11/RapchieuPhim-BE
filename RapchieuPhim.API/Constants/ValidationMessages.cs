@@ -305,6 +305,7 @@ namespace RapchieuPhim.API.Constants
         public const string AccountNo              = "15145686888"; // Số tài khoản ngân hàng nhận tiền
         public const string AccountName            = "Nguyen Quang Vinh"; // Tên chủ tài khoản ngân hàng
         public const string QrTemplate             = "compact"; // Template hiển thị (compact, qr_only, print)
+        public const string SepayApiKey            = "quangvinh"; // ⚠️ Thay bằng API Key thật từ Sepay Dashboard
 
         // Trạng thái thanh toán hợp lệ
         public const string StatusPending          = "Pending";
