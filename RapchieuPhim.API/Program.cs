@@ -126,6 +126,9 @@ builder.Services.AddScoped<IFoodService, FoodService>();
 builder.Services.AddScoped<IComboService, ComboService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 
+// Order Service
+builder.Services.AddScoped<IOrderService, OrderService>();
+
 // Seat Hold Service (Singleton để giữ state cache xuyên request)
 builder.Services.AddSingleton<ISeatHoldService, SeatHoldService>();
 

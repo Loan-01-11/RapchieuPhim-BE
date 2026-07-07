@@ -477,4 +477,46 @@ namespace RapchieuPhim.API.Constants
         public const string HoldNotFound        = "Không tìm thấy lần giữ ghế này hoặc đã hết hạn.";
         public const string UnauthorizedRelease = "Bạn không có quyền huỷ giữ ghế của người khác.";
     }
-}
+
+    // ── Hằng số dành riêng cho phân hệ Đơn hàng Đồ ăn (Order) ─────────────────
+    public static class OrderMessages
+    {
+        // Validation dữ liệu đầu vào
+        public const string OrderTypeRequired    = "Vui lòng chọn loại đơn hàng.";
+        public const string OrderTypeMaxLength   = "Loại đơn hàng không được vượt quá 50 ký tự.";
+        public const string ItemsRequired        = "Đơn hàng phải có ít nhất 1 món.";
+        public const string QuantityInvalid      = "Số lượng món phải từ 1 đến 100.";
+        public const string StatusRequired       = "Vui lòng cung cấp trạng thái đơn hàng.";
+
+        // Validation nghiệp vụ
+        public const string ItemMustHaveFoodOrCombo = "Mỗi dòng món phải có FoodId hoặc ComboId (không để trống cả hai).";
+        public const string ItemCannotHaveBoth      = "Mỗi dòng món chỉ được chọn Food hoặc Combo, không được chọn cả hai cùng lúc.";
+        public const string InvalidStatus           = "Trạng thái đơn hàng không hợp lệ. Chỉ chấp nhận: Pending | Confirmed | Cancelled.";
+        public const string CannotCancelConfirmed   = "Không thể hủy đơn hàng đã được xác nhận và đang xử lý.";
+
+        // Phân quyền
+        public const string UnauthorizedView   = "Bạn không có quyền xem đơn hàng của người khác.";
+        public const string UnauthorizedCancel = "Bạn không có quyền hủy đơn hàng này.";
+        public const string UnauthorizedStatus = "Quyền hạn bị từ chối! Chỉ Admin và Staff mới được cập nhật trạng thái đơn hàng.";
+
+        // Loại đơn hàng hợp lệ
+        public const string TypeDineIn   = "DineIn";
+        public const string TypeTakeaway = "Takeaway";
+        public const string TypeOnline   = "Online";
+
+        // Trạng thái đơn hàng hợp lệ
+        public const string StatusPending   = "Pending";
+        public const string StatusConfirmed = "Confirmed";
+        public const string StatusCancelled = "Cancelled";
+
+        // Thành công
+        public const string CreateSuccess = "Tạo đơn hàng đồ ăn thành công!";
+        public const string UpdateSuccess = "Cập nhật trạng thái đơn hàng thành công!";
+        public const string CancelSuccess = "Hủy đơn hàng thành công!";
+
+        // Hàm trả về thông báo động
+        public static string NotFoundWithId(int id)    => $"Không tìm thấy đơn hàng có ID = {id}.";
+        public static string FoodNotFoundWithId(int id)  => $"Không tìm thấy món ăn có ID = {id}.";
+        public static string ComboNotFoundWithId(int id) => $"Không tìm thấy combo có ID = {id}.";
+    }
+}
