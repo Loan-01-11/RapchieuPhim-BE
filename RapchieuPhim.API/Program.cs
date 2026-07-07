@@ -132,6 +132,13 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 // Seat Hold Service (Singleton để giữ state cache xuyên request)
 builder.Services.AddSingleton<ISeatHoldService, SeatHoldService>();
 
+// Staff Report Service
+builder.Services.AddScoped<IStaffReportService, StaffReportService>();
+
+// Staff Shift Service
+builder.Services.AddScoped<IStaffShiftService, StaffShiftService>();
+
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

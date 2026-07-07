@@ -1,88 +1,118 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using RapchieuPhim.API.Models;
+using RapchieuPhim.API.Constants;
+using RapchieuPhim.API.DTO.DTORequest;
+using RapchieuPhim.API.Services;
 
 namespace RapchieuPhim.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize] // 🔐 Mặc định toàn bộ Controller yêu cầu đăng nhập
     public class StaffShiftsController : ControllerBase
     {
-        private readonly CinemaManagementContext _context;
+        private readonly IStaffShiftService _staffShiftService;
 
-        public StaffShiftsController(CinemaManagementContext context)
+        public StaffShiftsController(IStaffShiftService staffShiftService)
         {
-            _context = context;
+            _staffShiftService = staffShiftService;
         }
 
+        // 👑 1. LẤY TẤT CẢ CA LÀM VIỆC (CHỈ ADMIN & STAFF)
         // GET: api/StaffShifts
         [HttpGet]
+        [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Staff}")]
         public async Task<IActionResult> GetAll()
         {
-            var shifts = await _context.Staffshifts.ToListAsync();
+            var shifts = await _staffShiftService.GetAllAsync();
             return Ok(shifts);
         }
 
+        // 👑 2. XEM CHI TIẾT CA LÀM VIỆC THEO ID (CHỈ ADMIN & STAFF)
         // GET: api/StaffShifts/{id}
         [HttpGet("{id}")]
+        [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Staff}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var shift = await _context.Staffshifts.FindAsync(id);
+            var shift = await _staffShiftService.GetByIdAsync(id);
             if (shift == null)
-                return NotFound(new { Message = $"StaffShift with id {id} not found." });
+                return NotFound(new { Message = $"Không tìm thấy ca làm việc với id {id}." });
+
             return Ok(shift);
         }
 
+        // 👑 3. LẤY DANH SÁCH CA THEO NHÂN VIÊN (CHỈ ADMIN & STAFF)
         // GET: api/StaffShifts/ByStaff/{staffId}
         [HttpGet("ByStaff/{staffId}")]
+        [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Staff}")]
         public async Task<IActionResult> GetByStaff(int staffId)
         {
-            var shifts = await _context.Staffshifts
-                .Where(s => s.StaffId == staffId)
-                .OrderByDescending(s => s.ShiftDate)
-                .ToListAsync();
+            var shifts = await _staffShiftService.GetByStaffAsync(staffId);
             return Ok(shifts);
         }
 
+        // 👑 4. LẤY DANH SÁCH CA THEO RẠP (CHỈ ADMIN & STAFF)
         // GET: api/StaffShifts/ByCinema/{cinemaId}
         [HttpGet("ByCinema/{cinemaId}")]
+        [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Staff}")]
         public async Task<IActionResult> GetByCinema(int cinemaId)
         {
-            var shifts = await _context.Staffshifts
-                .Where(s => s.CinemaId == cinemaId)
-                .OrderByDescending(s => s.ShiftDate)
-                .ToListAsync();
+            var shifts = await _staffShiftService.GetByCinemaAsync(cinemaId);
             return Ok(shifts);
         }
 
+        // 👑 5. MỞ CA LÀM VIỆC MỚI (CHỈ ADMIN & STAFF)
         // POST: api/StaffShifts
+        // Body: { "staffId": 1, "cinemaId": 1 } — hệ thống tự gán ShiftStart và Status = "Open"
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Staffshift shift)
+        [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Staff}")]
+        public async Task<IActionResult> Create([FromBody] CreateStaffShiftRequest request)
         {
-            _context.Staffshifts.Add(shift);
-            await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetById), new { id = shift.ShiftId }, shift);
+            if (!ModelState.IsValid)
+                return BadRequest(new { Message = GetFirstError() });
+
+            var result = await _staffShiftService.CreateAsync(request);
+            return StatusCode(result.StatusCode,
+                result.IsSuccess ? result.Data : new { result.Message });
         }
 
-        // PUT: api/StaffShifts/{id} – update shift (close shift with summary)
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] Staffshift shift)
+        // 👑 6. ĐÓNG CA LÀM VIỆC – GHI NHẬN KẾT QUẢ (CHỈ ADMIN & STAFF)
+        // PUT: api/StaffShifts/{id}/Close
+        // Body: { "totalBookings": 5, "totalOrders": 3, "totalRevenue": 500000, "summary": "..." }
+        // Hệ thống tự gán ShiftEnd = Now và Status = "Closed"
+        [HttpPut("{id}/Close")]
+        [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Staff}")]
+        public async Task<IActionResult> CloseShift(int id, [FromBody] CloseStaffShiftRequest request)
         {
-            if (id != shift.ShiftId)
-                return BadRequest(new { Message = "Id mismatch." });
+            if (!ModelState.IsValid)
+                return BadRequest(new { Message = GetFirstError() });
 
-            _context.Entry(shift).State = EntityState.Modified;
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_context.Staffshifts.Any(e => e.ShiftId == id))
-                    return NotFound(new { Message = $"StaffShift with id {id} not found." });
-                throw;
-            }
-            return NoContent();
+            var result = await _staffShiftService.CloseShiftAsync(id, request);
+            return StatusCode(result.StatusCode,
+                result.IsSuccess ? result.Data : new { result.Message });
+        }
+
+        // 👑 7. XÓA CA LÀM VIỆC (CHỈ ADMIN)
+        // DELETE: api/StaffShifts/{id}
+        // Chỉ cho phép xóa ca đã đóng (Status = "Closed")
+        [HttpDelete("{id}")]
+        [Authorize(Roles = RoleConstants.Admin)]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var result = await _staffShiftService.DeleteAsync(id);
+            return StatusCode(result.StatusCode, new { result.Message });
+        }
+
+        // ── Private Helpers ──────────────────────────────────────────────────
+
+        /// <summary>Lấy lỗi đầu tiên từ ModelState để trả về message thân thiện.</summary>
+        private string GetFirstError()
+        {
+            foreach (var state in ModelState.Values)
+                foreach (var error in state.Errors)
+                    if (!string.IsNullOrEmpty(error.ErrorMessage))
+                        return error.ErrorMessage;
+            return "Dữ liệu không hợp lệ.";
         }
     }
 }
