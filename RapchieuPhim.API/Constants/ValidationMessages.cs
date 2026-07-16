@@ -158,10 +158,20 @@ namespace RapchieuPhim.API.Constants
         public const string TicketUpdateStatusSuccess = "Cập nhật trạng thái vé thành công!";
         public const string TicketConcurrencyError = "Dữ liệu vé đã bị thay đổi bởi một luồng khác, vui lòng thử lại.";
         public static string ErrorAutoTicket = "Lỗi khi tự động cấp vé: ";
+        public const string TicketScanAlreadyUsed = "Vé đã được sử dụng rồi. Không thể vào lại!";
+        public const string TicketScanCancelled = "Vé đã bị hủy. Không hợp lệ!";
+        public const string TicketScanSuccess = "✅ Vé hợp lệ! Khách được vào. Vé đã được đánh dấu là đã sử dụng.";
+        
+        // Trạng thái vé hợp lệ
+        public const string TicketStatusActive = "Active";
+        public const string TicketStatusUsed = "Used";
+        public const string TicketStatusCancelled = "Cancelled";
+        
         // --- CÁC HÀM TRẢ VỀ THÔNG BÁO CHỨA BIẾN ĐỘNG ĐỘNG ---
         public static string TicketNotFoundWithId(int id) => $"Không tìm thấy vé có ID = {id}.";
         public static string TicketNotFoundWithCode(string code) => $"Không tìm thấy vé mang mã Code: {code}.";
         public static string TicketNotFoundWithBooking(int bookingId) => $"Không tìm thấy vé nào thuộc đơn đặt vé ID: {bookingId}.";
+        public static string TicketScanInvalidStatus(string status) => $"Vé không hợp lệ (Trạng thái hiện tại: {status}). Chưa thanh toán!";
 
         #endregion
 
@@ -519,4 +529,4 @@ namespace RapchieuPhim.API.Constants
         public static string FoodNotFoundWithId(int id)  => $"Không tìm thấy món ăn có ID = {id}.";
         public static string ComboNotFoundWithId(int id) => $"Không tìm thấy combo có ID = {id}.";
     }
-}
+}

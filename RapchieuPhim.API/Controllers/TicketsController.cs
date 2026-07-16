@@ -82,5 +82,27 @@ namespace RapchieuPhim.API.Controllers
 
             return Ok(new { Message = result.Message });
         }
+
+        // POST: api/Tickets/Scan 🎫 (NHÂN VIÊN QUÉT MÃ QR SOÁT VÉ TẠI CẬA PHÒNG CHIếu)
+        // - Vé Active  → Cho vào → Đổi sang "Used"
+        // - Vé Used    → Từ chối (Vé đã dùng rồi)
+        // - Vé Pending → Từ chối (Chưa thanh toán)
+        // - Vé Cancelled→ Từ chối (Vé bị hủy)
+        [HttpPost("Scan")]
+        [Authorize(Roles = "Admin,Staff")]
+        public async Task<IActionResult> ScanTicket([FromBody] ScanTicketRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.TicketCode))
+                return BadRequest(new { Message = ValidationMessages.TicketCodeRequired });
+
+            var result = await _ticketService.ScanTicketAsync(request.TicketCode);
+
+            return StatusCode(result.StatusCode, new
+            {
+                IsSuccess = result.IsSuccess,
+                Message   = result.Message,
+                Ticket    = result.Ticket
+            });
+        }
     }
 }
