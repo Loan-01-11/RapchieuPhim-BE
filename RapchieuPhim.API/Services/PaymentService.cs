@@ -313,14 +313,71 @@ namespace RapchieuPhim.API.Services
             }
 
             // Bước 7: Kích hoạt toàn bộ vé (Pending → Active) và sinh QR vé thật
+            // Load kèm Booking → Showtime → Movie → Seat → Orders → Orderitems → Food/Combo
             var tickets = await _context.Tickets
                 .Where(t => allBatchBookingIds.Contains(t.BookingId) && t.Status == "Pending")
+                .Include(t => t.Booking)
+                    .ThenInclude(b => b.ShowTime)
+                        .ThenInclude(s => s.Movie)
+                .Include(t => t.Booking)
+                    .ThenInclude(b => b.Seat)
+                .Include(t => t.Booking)
+                    .ThenInclude(b => b.Orders)
+                        .ThenInclude(o => o.Orderitems)
+                            .ThenInclude(oi => oi.Food)
+                .Include(t => t.Booking)
+                    .ThenInclude(b => b.Orders)
+                        .ThenInclude(o => o.Orderitems)
+                            .ThenInclude(oi => oi.Combo)
                 .ToListAsync();
 
             foreach (var ticket in tickets)
             {
-                ticket.Status    = ShowtimeMessages.StatusActive;
-                ticket.QrCodeUrl = $"https://api.qrserver.com/v1/create-qr-code/?size=250x250&data={ticket.TicketCode}";
+                ticket.Status = ShowtimeMessages.StatusActive;
+
+                // Sinh nội dung đầy đủ nhúng vào QR Code
+                var booking  = ticket.Booking;
+                var showtime = booking?.ShowTime;
+                var movie    = showtime?.Movie;
+                var seat     = booking?.Seat;
+
+                string movieTitle   = movie?.Title ?? "Phim";
+                string seatInfo     = seat != null ? $"{seat.SeatRow}{seat.SeatNumber}" : "N/A";
+                string showtimeInfo = showtime != null
+                    ? showtime.StartTime.ToString("dd/MM/yyyy HH:mm")
+                    : "N/A";
+                string priceInfo    = booking != null
+                    ? $"{booking.TotalAmount:N0} VND"
+                    : "N/A";
+
+                // Lấy danh sách đồ ăn/combo (nếu có)
+                var allOrderItems = booking?.Orders
+                    .SelectMany(o => o.Orderitems)
+                    .ToList() ?? new List<Orderitem>();
+
+                var foodParts = allOrderItems
+                    .Where(oi => oi.Food != null)
+                    .Select(oi => $"{oi.Food!.FoodName}x{oi.Quantity}")
+                    .ToList();
+
+                var comboParts = allOrderItems
+                    .Where(oi => oi.Combo != null)
+                    .Select(oi => $"{oi.Combo!.ComboName}x{oi.Quantity}")
+                    .ToList();
+
+                var allFoodComboParts = foodParts.Concat(comboParts).ToList();
+                string foodInfo = allFoodComboParts.Count > 0
+                    ? string.Join(",", allFoodComboParts)
+                    : string.Empty;
+
+                // Nội dung text nhúng vào QR (scan ra sẽ hiện đầy đủ)
+                string qrData = $"VE:{ticket.TicketCode}|PHIM:{movieTitle}|SUAT:{showtimeInfo}|GHE:{seatInfo}|GIA:{priceInfo}|TRANG_THAI:{ticket.Status}";
+                if (!string.IsNullOrEmpty(foodInfo))
+                    qrData += $"|DO_AN:{foodInfo}";
+
+                // Encode URL để tránh ký tự đặc biệt làm vỡ URL
+                string encodedQrData = Uri.EscapeDataString(qrData);
+                ticket.QrCodeUrl = $"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={encodedQrData}";
             }
 
             await _context.SaveChangesAsync();
