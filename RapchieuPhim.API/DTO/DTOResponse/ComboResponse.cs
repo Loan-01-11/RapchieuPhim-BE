@@ -10,6 +10,13 @@ namespace RapchieuPhim.API.DTOs.DTOResponse
         public string? ImageUrl { get; set; }
         public int Quantity { get; set; }
         public bool IsAvailable { get; set; }
+        
+        public int SoldThisMonth { get; set; }
+        public decimal RevenueThisMonth { get; set; }
+        public int SoldToday { get; set; }
+        public decimal RevenueToday { get; set; }
+        public int SoldThisWeek { get; set; }
+        public decimal RevenueThisWeek { get; set; }
 
         // Danh sách các món trong combo — trả về tên và số lượng thay vì chỉ FK
         public List<ComboFoodItemResponse> FoodItems { get; set; } = new();

@@ -30,5 +30,7 @@ namespace RapchieuPhim.API.DTO.DTORequest
 
         [Required(ErrorMessage = ValidationMessages.MovieStatusRequired)]
         public string Status { get; set; } = null!;
+
+        public List<int> CategoryIds { get; set; } = new();
     }
 }

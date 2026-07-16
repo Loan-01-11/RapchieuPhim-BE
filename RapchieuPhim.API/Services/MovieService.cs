@@ -59,7 +59,7 @@ namespace RapchieuPhim.API.Services
             var today = DateOnly.FromDateTime(DateTime.Now);
             return await _context.Movies
                 .Include(m => m.Categories)
-                .Where(m => m.Status == MovieStatus.NowShowing && m.ReleaseDate <= today && m.EndDate >= today) 
+                .Where(m => m.Status == MovieStatus.NowShowing && m.ReleaseDate <= today && m.EndDate >= today)
                 .ToListAsync();
         }
 
@@ -68,7 +68,7 @@ namespace RapchieuPhim.API.Services
         {
             return await _context.Movies
                 .Include(m => m.Categories)
-                .Where(m => m.Status == MovieStatus.ComingSoon) 
+                .Where(m => m.Status == MovieStatus.ComingSoon)
                 .ToListAsync();
         }
 
@@ -86,21 +86,21 @@ namespace RapchieuPhim.API.Services
         {
             var movie = new Movie
             {
-                Title       = request.Title.Trim(),
+                Title = request.Title.Trim(),
                 Description = request.Description?.Trim(),
-                Duration    = request.Duration,
-                Director    = request.Director?.Trim(),
-                Actors      = request.Actors?.Trim(),
-                Language    = request.Language?.Trim(),
-                Subtitles   = request.Subtitles?.Trim(),
-                AgeRating   = request.AgeRating?.Trim(),
+                Duration = request.Duration,
+                Director = request.Director?.Trim(),
+                Actors = request.Actors?.Trim(),
+                Language = request.Language?.Trim(),
+                Subtitles = request.Subtitles?.Trim(),
+                AgeRating = request.AgeRating?.Trim(),
                 ReleaseDate = DateOnly.FromDateTime(request.ReleaseDate),
-                EndDate     = DateOnly.FromDateTime(request.EndDate),
-                PosterUrl   = request.PosterUrl?.Trim(),
-                TrailerUrl  = request.TrailerUrl?.Trim(),
-                Status      = request.Status.Trim(),
-                CreatedAt   = DateTime.Now,
-                CreatedBy   = createdByUserId
+                EndDate = DateOnly.FromDateTime(request.EndDate),
+                PosterUrl = request.PosterUrl?.Trim(),
+                TrailerUrl = request.TrailerUrl?.Trim(),
+                Status = request.Status.Trim(),
+                CreatedAt = DateTime.Now,
+                CreatedBy = createdByUserId
             };
 
             // Gắn thể loại cho phim
@@ -123,23 +123,38 @@ namespace RapchieuPhim.API.Services
         // 👑 5. CẬP NHẬT PHIM (ADMIN)
         public async Task<(bool IsSuccess, string Message, int StatusCode, object? Data)> UpdateAsync(int id, UpdateMovieRequest request)
         {
-            var movie = await _context.Movies.FindAsync(id);
+            var movie = await _context.Movies
+                .Include(m => m.Categories)
+                .FirstOrDefaultAsync(m => m.MovieId == id);
+
             if (movie == null)
                 return (false, ValidationMessages.MovieNotFoundWithId(id), 404, null);
 
-            movie.Title       = request.Title.Trim();
+            movie.Title = request.Title.Trim();
             movie.Description = request.Description?.Trim();
-            movie.Duration    = request.Duration;
-            movie.Director    = request.Director?.Trim();
-            movie.Actors      = request.Actors?.Trim();
-            movie.Language    = request.Language?.Trim();
-            movie.Subtitles   = request.Subtitles?.Trim();
-            movie.AgeRating   = request.AgeRating?.Trim();
+            movie.Duration = request.Duration;
+            movie.Director = request.Director?.Trim();
+            movie.Actors = request.Actors?.Trim();
+            movie.Language = request.Language?.Trim();
+            movie.Subtitles = request.Subtitles?.Trim();
+            movie.AgeRating = request.AgeRating?.Trim();
             movie.ReleaseDate = DateOnly.FromDateTime(request.ReleaseDate);
-            movie.EndDate     = DateOnly.FromDateTime(request.EndDate);
-            movie.PosterUrl   = request.PosterUrl?.Trim();
-            movie.TrailerUrl  = request.TrailerUrl?.Trim();
-            movie.Status      = request.Status.Trim();
+            movie.EndDate = DateOnly.FromDateTime(request.EndDate);
+            movie.PosterUrl = request.PosterUrl?.Trim();
+            movie.TrailerUrl = request.TrailerUrl?.Trim();
+            movie.Status = request.Status.Trim();
+
+            // Cập nhật thể loại cho phim
+            if (request.CategoryIds != null)
+            {
+                movie.Categories.Clear();
+                foreach (var catId in request.CategoryIds)
+                {
+                    var category = await _context.Moviecategories.FindAsync(catId);
+                    if (category != null)
+                        movie.Categories.Add(category);
+                }
+            }
 
             try
             {

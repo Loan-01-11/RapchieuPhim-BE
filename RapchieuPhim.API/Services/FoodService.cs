@@ -31,13 +31,19 @@ namespace RapchieuPhim.API.Services
         // ── Ánh xạ Entity → Response DTO ────────────────────────────────────────
         private static FoodResponse MapToResponse(Food f) => new()
         {
-            FoodId      = f.FoodId,
-            FoodName    = f.FoodName,
-            Category    = f.Category,
-            Price       = f.Price,
-            Quantity    = f.Quantity,
-            ImageUrl    = f.ImageUrl,
-            IsAvailable = f.IsAvailable
+            FoodId = f.FoodId,
+            FoodName = f.FoodName,
+            Category = f.Category,
+            Price = f.Price,
+            Quantity = f.Quantity,
+            ImageUrl = f.ImageUrl,
+            IsAvailable = f.IsAvailable,
+            SoldThisMonth = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Month == DateTime.Now.Month && oi.Order.OrderDate.Year == DateTime.Now.Year).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
+            RevenueThisMonth = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Month == DateTime.Now.Month && oi.Order.OrderDate.Year == DateTime.Now.Year).Sum(oi => (decimal?)oi.Subtotal) ?? 0m : 0m,
+            SoldToday = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Date == DateTime.Now.Date).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
+            RevenueToday = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Date == DateTime.Now.Date).Sum(oi => (decimal?)oi.Subtotal) ?? 0m : 0m,
+            SoldThisWeek = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate >= DateTime.Now.AddDays(-7)).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
+            RevenueThisWeek = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate >= DateTime.Now.AddDays(-7)).Sum(oi => (decimal?)oi.Subtotal) ?? 0m : 0m
         };
 
         /// <summary>
@@ -51,13 +57,19 @@ namespace RapchieuPhim.API.Services
                 .ThenBy(f => f.FoodName)
                 .Select(f => new FoodResponse
                 {
-                    FoodId      = f.FoodId,
-                    FoodName    = f.FoodName,
-                    Category    = f.Category,
-                    Price       = f.Price,
-                    Quantity    = f.Quantity,
-                    ImageUrl    = f.ImageUrl,
-                    IsAvailable = f.IsAvailable
+                    FoodId = f.FoodId,
+                    FoodName = f.FoodName,
+                    Category = f.Category,
+                    Price = f.Price,
+                    Quantity = f.Quantity,
+                    ImageUrl = f.ImageUrl,
+                    IsAvailable = f.IsAvailable,
+                    SoldThisMonth = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Month == DateTime.Now.Month && oi.Order.OrderDate.Year == DateTime.Now.Year).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
+                    RevenueThisMonth = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Month == DateTime.Now.Month && oi.Order.OrderDate.Year == DateTime.Now.Year).Sum(oi => (decimal?)oi.Subtotal) ?? 0m : 0m,
+                    SoldToday = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Date == DateTime.Now.Date).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
+                    RevenueToday = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Date == DateTime.Now.Date).Sum(oi => (decimal?)oi.Subtotal) ?? 0m : 0m,
+                    SoldThisWeek = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate >= DateTime.Now.AddDays(-7)).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
+                    RevenueThisWeek = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate >= DateTime.Now.AddDays(-7)).Sum(oi => (decimal?)oi.Subtotal) ?? 0m : 0m
                 })
                 .ToListAsync();
         }
@@ -67,7 +79,10 @@ namespace RapchieuPhim.API.Services
         /// </summary>
         public async Task<FoodResponse?> GetByIdAsync(int id)
         {
-            var f = await _context.Foods.FindAsync(id);
+            var f = await _context.Foods
+                .Include(f => f.Orderitems)
+                .ThenInclude(oi => oi.Order)
+                .FirstOrDefaultAsync(f => f.FoodId == id);
             return f == null ? null : MapToResponse(f);
         }
 
@@ -83,13 +98,19 @@ namespace RapchieuPhim.API.Services
                 .ThenBy(f => f.FoodName)
                 .Select(f => new FoodResponse
                 {
-                    FoodId      = f.FoodId,
-                    FoodName    = f.FoodName,
-                    Category    = f.Category,
-                    Price       = f.Price,
-                    Quantity    = f.Quantity,
-                    ImageUrl    = f.ImageUrl,
-                    IsAvailable = f.IsAvailable
+                    FoodId = f.FoodId,
+                    FoodName = f.FoodName,
+                    Category = f.Category,
+                    Price = f.Price,
+                    Quantity = f.Quantity,
+                    ImageUrl = f.ImageUrl,
+                    IsAvailable = f.IsAvailable,
+                    SoldThisMonth = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Month == DateTime.Now.Month && oi.Order.OrderDate.Year == DateTime.Now.Year).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
+                    RevenueThisMonth = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Month == DateTime.Now.Month && oi.Order.OrderDate.Year == DateTime.Now.Year).Sum(oi => (decimal?)oi.Subtotal) ?? 0m : 0m,
+                    SoldToday = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Date == DateTime.Now.Date).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
+                    RevenueToday = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Date == DateTime.Now.Date).Sum(oi => (decimal?)oi.Subtotal) ?? 0m : 0m,
+                    SoldThisWeek = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate >= DateTime.Now.AddDays(-7)).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
+                    RevenueThisWeek = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate >= DateTime.Now.AddDays(-7)).Sum(oi => (decimal?)oi.Subtotal) ?? 0m : 0m
                 })
                 .ToListAsync();
         }
@@ -104,13 +125,19 @@ namespace RapchieuPhim.API.Services
                 .OrderBy(f => f.FoodName)
                 .Select(f => new FoodResponse
                 {
-                    FoodId      = f.FoodId,
-                    FoodName    = f.FoodName,
-                    Category    = f.Category,
-                    Price       = f.Price,
-                    Quantity    = f.Quantity,
-                    ImageUrl    = f.ImageUrl,
-                    IsAvailable = f.IsAvailable
+                    FoodId = f.FoodId,
+                    FoodName = f.FoodName,
+                    Category = f.Category,
+                    Price = f.Price,
+                    Quantity = f.Quantity,
+                    ImageUrl = f.ImageUrl,
+                    IsAvailable = f.IsAvailable,
+                    SoldThisMonth = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Month == DateTime.Now.Month && oi.Order.OrderDate.Year == DateTime.Now.Year).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
+                    RevenueThisMonth = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Month == DateTime.Now.Month && oi.Order.OrderDate.Year == DateTime.Now.Year).Sum(oi => (decimal?)oi.Subtotal) ?? 0m : 0m,
+                    SoldToday = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Date == DateTime.Now.Date).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
+                    RevenueToday = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Date == DateTime.Now.Date).Sum(oi => (decimal?)oi.Subtotal) ?? 0m : 0m,
+                    SoldThisWeek = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate >= DateTime.Now.AddDays(-7)).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
+                    RevenueThisWeek = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate >= DateTime.Now.AddDays(-7)).Sum(oi => (decimal?)oi.Subtotal) ?? 0m : 0m
                 })
                 .ToListAsync();
         }
@@ -130,11 +157,11 @@ namespace RapchieuPhim.API.Services
 
             var food = new Food
             {
-                FoodName    = request.FoodName.Trim(),
-                Category    = request.Category?.Trim(),
-                Price       = request.Price,
-                Quantity    = request.Quantity,
-                ImageUrl    = request.ImageUrl?.Trim(),
+                FoodName = request.FoodName.Trim(),
+                Category = request.Category?.Trim(),
+                Price = request.Price,
+                Quantity = request.Quantity,
+                ImageUrl = request.ImageUrl?.Trim(),
                 IsAvailable = request.IsAvailable
             };
 
@@ -169,11 +196,11 @@ namespace RapchieuPhim.API.Services
                 return (false, FoodMessages.FoodNameAlreadyExists, 409);
 
             // 4. Áp dụng thay đổi
-            food.FoodName    = request.FoodName.Trim();
-            food.Category    = request.Category?.Trim();
-            food.Price       = request.Price;
-            food.Quantity    = request.Quantity;
-            food.ImageUrl    = request.ImageUrl?.Trim();
+            food.FoodName = request.FoodName.Trim();
+            food.Category = request.Category?.Trim();
+            food.Price = request.Price;
+            food.Quantity = request.Quantity;
+            food.ImageUrl = request.ImageUrl?.Trim();
             food.IsAvailable = request.IsAvailable;
 
             try

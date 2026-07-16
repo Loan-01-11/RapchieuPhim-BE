@@ -62,6 +62,15 @@ namespace RapchieuPhim.API.Controllers
             return Ok(payments);
         }
 
+        // GET: api/Payments/Status/{bookingId}  🔓 (Khách hàng kiểm tra trạng thái thanh toán)
+        [HttpGet("Status/{bookingId}")]
+        public async Task<IActionResult> GetPaymentStatus(int bookingId)
+        {
+            var payments = await _paymentService.GetByBookingAsync(bookingId);
+            bool isPaid = payments != null && payments.Any(p => p.PaymentStatus == PaymentMessages.StatusSuccess || p.PaymentStatus == "Paid" || p.PaymentStatus == "Success");
+            return Ok(new { IsPaid = isPaid });
+        }
+
         // GET: api/Payments/RevenueByMovie  👑 (Admin + Staff xem doanh thu theo phim từ View)
         [HttpGet("RevenueByMovie")]
         [Authorize(Roles = "Admin,Staff")]

@@ -1,4 +1,4 @@
-﻿namespace RapchieuPhim.API.DTOs.DTOResponse
+namespace RapchieuPhim.API.DTOs.DTOResponse
 {
     public class BookingDetailResponse
     {
@@ -19,5 +19,6 @@
         public string BookingType { get; set; } = null!;
         public string Status { get; set; } = null!;
         public DateTime BookingDate { get; set; }
+        public string? TicketCode { get; set; }
     }
 }

@@ -33,20 +33,26 @@ namespace RapchieuPhim.API.Services
         // ── Helper: Ánh xạ Entity → Response DTO ─────────────────────────────────
         private static ComboResponse MapToResponse(Combo c) => new()
         {
-            ComboId     = c.ComboId,
-            ComboName   = c.ComboName,
-            Price       = c.Price,
+            ComboId = c.ComboId,
+            ComboName = c.ComboName,
+            Price = c.Price,
             Description = c.Description,
-            ImageUrl    = c.ImageUrl,
-            Quantity    = c.Quantity,
+            ImageUrl = c.ImageUrl,
+            Quantity = c.Quantity,
             IsAvailable = c.IsAvailable,
-            FoodItems   = c.Combofoodmappings.Select(m => new ComboFoodItemResponse
+            SoldThisMonth = c.Orderitems != null ? c.Orderitems.Where(oi => oi.Order.OrderDate.Month == DateTime.Now.Month && oi.Order.OrderDate.Year == DateTime.Now.Year).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
+            RevenueThisMonth = c.Orderitems != null ? c.Orderitems.Where(oi => oi.Order.OrderDate.Month == DateTime.Now.Month && oi.Order.OrderDate.Year == DateTime.Now.Year).Sum(oi => (decimal?)oi.Subtotal) ?? 0m : 0m,
+            SoldToday = c.Orderitems != null ? c.Orderitems.Where(oi => oi.Order.OrderDate.Date == DateTime.Now.Date).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
+            RevenueToday = c.Orderitems != null ? c.Orderitems.Where(oi => oi.Order.OrderDate.Date == DateTime.Now.Date).Sum(oi => (decimal?)oi.Subtotal) ?? 0m : 0m,
+            SoldThisWeek = c.Orderitems != null ? c.Orderitems.Where(oi => oi.Order.OrderDate >= DateTime.Now.AddDays(-7)).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
+            RevenueThisWeek = c.Orderitems != null ? c.Orderitems.Where(oi => oi.Order.OrderDate >= DateTime.Now.AddDays(-7)).Sum(oi => (decimal?)oi.Subtotal) ?? 0m : 0m,
+            FoodItems = c.Combofoodmappings.Select(m => new ComboFoodItemResponse
             {
-                FoodId    = m.FoodId,
-                FoodName  = m.Food.FoodName,
-                Category  = m.Food.Category,
+                FoodId = m.FoodId,
+                FoodName = m.Food.FoodName,
+                Category = m.Food.Category,
                 UnitPrice = m.Food.Price,
-                Quantity  = m.Quantity
+                Quantity = m.Quantity
             }).ToList()
         };
 
@@ -54,7 +60,9 @@ namespace RapchieuPhim.API.Services
         private IQueryable<Combo> QueryWithFoods() =>
             _context.Combos
                 .Include(c => c.Combofoodmappings)
-                    .ThenInclude(m => m.Food);
+                    .ThenInclude(m => m.Food)
+                .Include(c => c.Orderitems)
+                    .ThenInclude(oi => oi.Order);
 
         /// <summary>
         /// Lấy toàn bộ danh sách combo kèm danh sách món bên trong.
@@ -106,11 +114,11 @@ namespace RapchieuPhim.API.Services
             // 2. Tạo Combo
             var combo = new Combo
             {
-                ComboName   = request.ComboName.Trim(),
-                Price       = request.Price,
+                ComboName = request.ComboName.Trim(),
+                Price = request.Price,
                 Description = request.Description?.Trim(),
-                ImageUrl    = request.ImageUrl?.Trim(),
-                Quantity    = request.Quantity,
+                ImageUrl = request.ImageUrl?.Trim(),
+                Quantity = request.Quantity,
                 IsAvailable = request.IsAvailable
             };
             _context.Combos.Add(combo);
@@ -128,8 +136,8 @@ namespace RapchieuPhim.API.Services
 
                     _context.Combofoodmappings.Add(new Combofoodmapping
                     {
-                        ComboId  = combo.ComboId,
-                        FoodId   = item.FoodId,
+                        ComboId = combo.ComboId,
+                        FoodId = item.FoodId,
                         Quantity = item.Quantity
                     });
                 }
@@ -162,11 +170,11 @@ namespace RapchieuPhim.API.Services
             if (nameConflict)
                 return (false, ComboMessages.ComboNameAlreadyExists, 409);
 
-            combo.ComboName   = request.ComboName.Trim();
-            combo.Price       = request.Price;
+            combo.ComboName = request.ComboName.Trim();
+            combo.Price = request.Price;
             combo.Description = request.Description?.Trim();
-            combo.ImageUrl    = request.ImageUrl?.Trim();
-            combo.Quantity    = request.Quantity;
+            combo.ImageUrl = request.ImageUrl?.Trim();
+            combo.Quantity = request.Quantity;
             combo.IsAvailable = request.IsAvailable;
 
             // Nếu request có kèm FoodItems → thay thế toàn bộ danh sách món
@@ -183,8 +191,8 @@ namespace RapchieuPhim.API.Services
 
                     _context.Combofoodmappings.Add(new Combofoodmapping
                     {
-                        ComboId  = id,
-                        FoodId   = item.FoodId,
+                        ComboId = id,
+                        FoodId = item.FoodId,
                         Quantity = item.Quantity
                     });
                 }
@@ -255,8 +263,8 @@ namespace RapchieuPhim.API.Services
 
             _context.Combofoodmappings.Add(new Combofoodmapping
             {
-                ComboId  = comboId,
-                FoodId   = request.FoodId,
+                ComboId = comboId,
+                FoodId = request.FoodId,
                 Quantity = request.Quantity
             });
             await _context.SaveChangesAsync();

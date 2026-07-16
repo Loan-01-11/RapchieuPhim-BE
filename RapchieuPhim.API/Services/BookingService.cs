@@ -32,23 +32,23 @@ namespace RapchieuPhim.API.Services
             return await _context.VwBookingDetails
                 .Select(b => new BookingDetailResponse
                 {
-                    BookingId    = b.BookingId,
+                    BookingId = b.BookingId,
                     CustomerName = b.CustomerName,
-                    Email        = b.Email,
-                    MovieTitle   = b.MovieTitle,
-                    AreaName     = b.AreaName,
-                    CinemaName   = b.CinemaName,
-                    RoomName     = b.RoomName,
-                    RoomType     = b.RoomType,
-                    SeatNumber   = b.SeatNumber,
-                    SeatType     = b.SeatType,
-                    StartTime    = b.StartTime,
-                    TicketPrice  = b.TicketPrice,
-                    DiscountAmt  = b.DiscountAmt,
-                    TotalAmount  = b.TotalAmount,
-                    BookingType  = b.BookingType,
-                    Status       = b.Status,
-                    BookingDate  = b.BookingDate
+                    Email = b.Email,
+                    MovieTitle = b.MovieTitle,
+                    AreaName = b.AreaName,
+                    CinemaName = b.CinemaName,
+                    RoomName = b.RoomName,
+                    RoomType = b.RoomType,
+                    SeatNumber = b.SeatNumber,
+                    SeatType = b.SeatType,
+                    StartTime = b.StartTime,
+                    TicketPrice = b.TicketPrice,
+                    DiscountAmt = b.DiscountAmt,
+                    TotalAmount = b.TotalAmount,
+                    BookingType = b.BookingType,
+                    Status = b.Status,
+                    BookingDate = b.BookingDate
                 }).ToListAsync();
         }
 
@@ -59,23 +59,23 @@ namespace RapchieuPhim.API.Services
                 .Where(b => b.BookingId == id)
                 .Select(b => new BookingDetailResponse
                 {
-                    BookingId    = b.BookingId,
+                    BookingId = b.BookingId,
                     CustomerName = b.CustomerName,
-                    Email        = b.Email,
-                    MovieTitle   = b.MovieTitle,
-                    AreaName     = b.AreaName,
-                    CinemaName   = b.CinemaName,
-                    RoomName     = b.RoomName,
-                    RoomType     = b.RoomType,
-                    SeatNumber   = b.SeatNumber,
-                    SeatType     = b.SeatType,
-                    StartTime    = b.StartTime,
-                    TicketPrice  = b.TicketPrice,
-                    DiscountAmt  = b.DiscountAmt,
-                    TotalAmount  = b.TotalAmount,
-                    BookingType  = b.BookingType,
-                    Status       = b.Status,
-                    BookingDate  = b.BookingDate
+                    Email = b.Email,
+                    MovieTitle = b.MovieTitle,
+                    AreaName = b.AreaName,
+                    CinemaName = b.CinemaName,
+                    RoomName = b.RoomName,
+                    RoomType = b.RoomType,
+                    SeatNumber = b.SeatNumber,
+                    SeatType = b.SeatType,
+                    StartTime = b.StartTime,
+                    TicketPrice = b.TicketPrice,
+                    DiscountAmt = b.DiscountAmt,
+                    TotalAmount = b.TotalAmount,
+                    BookingType = b.BookingType,
+                    Status = b.Status,
+                    BookingDate = b.BookingDate
                 }).FirstOrDefaultAsync();
         }
 
@@ -89,23 +89,24 @@ namespace RapchieuPhim.API.Services
                 .Where(b => _context.Bookings.Any(realBk => realBk.BookingId == b.BookingId && realBk.UserId == userId))
                 .Select(b => new BookingDetailResponse
                 {
-                    BookingId    = b.BookingId,
+                    BookingId = b.BookingId,
                     CustomerName = b.CustomerName,
-                    Email        = b.Email,
-                    MovieTitle   = b.MovieTitle,
-                    AreaName     = b.AreaName,
-                    CinemaName   = b.CinemaName,
-                    RoomName     = b.RoomName,
-                    RoomType     = b.RoomType,
-                    SeatNumber   = b.SeatNumber,
-                    SeatType     = b.SeatType,
-                    StartTime    = b.StartTime,
-                    TicketPrice  = b.TicketPrice,
-                    DiscountAmt  = b.DiscountAmt,
-                    TotalAmount  = b.TotalAmount,
-                    BookingType  = b.BookingType,
-                    Status       = b.Status,
-                    BookingDate  = b.BookingDate
+                    Email = b.Email,
+                    MovieTitle = b.MovieTitle,
+                    AreaName = b.AreaName,
+                    CinemaName = b.CinemaName,
+                    RoomName = b.RoomName,
+                    RoomType = b.RoomType,
+                    SeatNumber = b.SeatNumber,
+                    SeatType = b.SeatType,
+                    StartTime = b.StartTime,
+                    TicketPrice = b.TicketPrice,
+                    DiscountAmt = b.DiscountAmt,
+                    TotalAmount = b.TotalAmount,
+                    BookingType = b.BookingType,
+                    Status = b.Status,
+                    BookingDate = b.BookingDate,
+                    TicketCode = _context.Tickets.Where(tk => tk.BookingId == b.BookingId).Select(tk => tk.TicketCode).FirstOrDefault()
                 }).ToListAsync();
 
             return (true, ValidationMessages.GetHistorySuccess, data);
@@ -120,12 +121,12 @@ namespace RapchieuPhim.API.Services
                 {
                     ShowTimeId = s.ShowTimeId,
                     MovieTitle = s.MovieTitle,
-                    StartTime  = s.StartTime,
-                    SeatId     = s.SeatId,
+                    StartTime = s.StartTime,
+                    SeatId = s.SeatId,
                     SeatNumber = s.SeatNumber,
-                    SeatType   = s.SeatType,
-                    RoomId     = s.RoomId,
-                    RoomName   = s.RoomName
+                    SeatType = s.SeatType,
+                    RoomId = s.RoomId,
+                    RoomName = s.RoomName
                 }).ToListAsync();
         }
 
@@ -138,8 +139,8 @@ namespace RapchieuPhim.API.Services
                 return (false, ValidationMessages.BookingMessages.DuplicateSeatIds, null);
 
             // ── BƯỚC 2: Xác định UserId & StaffId ────────────────────────────────
-            int  finalUserId = currentUserId;
-            int? staffId     = null;
+            int finalUserId = currentUserId;
+            int? staffId = null;
 
             if (request.BookingType.Trim() == ValidationMessages.Counter)
             {
@@ -209,7 +210,7 @@ namespace RapchieuPhim.API.Services
             // [NOTE]: Đảm bảo tìm đủ số lượng ghế trong Database tương ứng với số lượng ID gửi lên
             if (seats.Count != request.SeatIds.Count)
             {
-                var foundIds  = seats.Select(s => s.SeatId).ToHashSet();
+                var foundIds = seats.Select(s => s.SeatId).ToHashSet();
                 var missingId = request.SeatIds.First(id => !foundIds.Contains(id));
                 return (false, ValidationMessages.SeatNotFoundWithId(missingId), null);
             }
@@ -229,16 +230,16 @@ namespace RapchieuPhim.API.Services
 
             // ── BƯỚC 6: Lấy giá vé từ TicketPricing ─────────────────────────────
             // [NOTE]: Xác định ngày đặt vé là Ngày thường (Weekday) hay Cuối tuần (Weekend) để tính giá
-            var    today   = DateOnly.FromDateTime(DateTime.Now);
+            var today = DateOnly.FromDateTime(DateTime.Now);
             string dayType = DateTime.Now.DayOfWeek == DayOfWeek.Saturday ||
                              DateTime.Now.DayOfWeek == DayOfWeek.Sunday
                              ? "Weekend" : "Weekday";
 
             // ── BƯỚC 7: Xử lý mã giảm giá ────────────────────────────────────────
             // [NOTE]: Xác thực mã giảm giá (DiscountCode) nếu khách hàng có áp dụng
-            decimal   totalDiscountAmt = 0; //Biến lưu tổng số tiền sẽ được giảm giá (mặc định ban đầu là 0 đồng).
-            int?      discountId       = null;//Biến lưu ID của mã giảm giá (dùng kiểu int? để có thể nhận giá trị null nếu khách không áp mã).
-            Discount? discount         = null;//Biến dùng để chứa toàn bộ thông tin của mã giảm giá lấy từ Database lên.
+            decimal totalDiscountAmt = 0; //Biến lưu tổng số tiền sẽ được giảm giá (mặc định ban đầu là 0 đồng).
+            int? discountId = null;//Biến lưu ID của mã giảm giá (dùng kiểu int? để có thể nhận giá trị null nếu khách không áp mã).
+            Discount? discount = null;//Biến dùng để chứa toàn bộ thông tin của mã giảm giá lấy từ Database lên.
 
             //Kiểm tra xem khách hàng có nhập mã giảm giá hay không.
             //Hàm IsNullOrWhiteSpace sẽ kiểm tra xem chuỗi có bị null, rỗng "" hoặc chỉ toàn dấu cách "   " hay không
@@ -259,7 +260,7 @@ namespace RapchieuPhim.API.Services
                     return (false, ValidationMessages.BookingMessages.DiscountMaxUsageReached, null);
 
                 // [NOTE]: Kiểm tra xem tài khoản khách hàng đã dùng vượt quá số lần giới hạn cho phép chưa
-                var userUsage    = await _context.Userdiscountusages
+                var userUsage = await _context.Userdiscountusages
                     .FirstOrDefaultAsync(u => u.UserId == finalUserId && u.DiscountId == discount.DiscountId);
                 int userUsedCount = userUsage?.UsedCount ?? 0;//?? 0: Toán tử liên kết null. Nếu kết quả bên trái là null, hệ thống sẽ tự động gán giá trị bằng 0.
                 if (userUsedCount >= discount.MaxUsagePerUser)
@@ -274,10 +275,10 @@ namespace RapchieuPhim.API.Services
             await using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                var newBookingIds     = new List<int>();
-                decimal ticketTotal   = 0; // Tổng tiền vé (trước giảm giá)
-                var createdBookings   = new List<(Booking Booking, decimal TicketPrice)>();
-                var bookingDate       = DateTime.Now; // 🌟 Thời gian đồng nhất cho cả nhóm ghế đặt cùng lúc
+                var newBookingIds = new List<int>();
+                decimal ticketTotal = 0; // Tổng tiền vé (trước giảm giá)
+                var createdBookings = new List<(Booking Booking, decimal TicketPrice)>();
+                var bookingDate = DateTime.Now; // 🌟 Thời gian đồng nhất cho cả nhóm ghế đặt cùng lúc
 
                 // 8a. Tính giá và tạo Booking cho từng ghế
                 foreach (var seat in seats)
@@ -287,9 +288,9 @@ namespace RapchieuPhim.API.Services
                         .Where(p => p.IsActive
                                  && (p.RoomType == null || p.RoomType == showtime.Room.RoomType)
                                  && (p.SeatType == null || p.SeatType == seat.SeatType)
-                                 && (p.DayType  == null || p.DayType  == dayType)
+                                 && (p.DayType == null || p.DayType == dayType)
                                  && p.EffectFrom <= today
-                                 && (p.EffectTo  == null || p.EffectTo >= today))
+                                 && (p.EffectTo == null || p.EffectTo >= today))
                         .OrderByDescending(p => p.EffectFrom)
                         .FirstOrDefaultAsync();
 
@@ -299,17 +300,17 @@ namespace RapchieuPhim.API.Services
                     ticketTotal += pricing.Price;
                     createdBookings.Add((new Booking
                     {
-                        UserId      = finalUserId,
-                        ShowTimeId  = request.ShowTimeId,
-                        SeatId      = seat.SeatId,
-                        DiscountId  = null,
+                        UserId = finalUserId,
+                        ShowTimeId = request.ShowTimeId,
+                        SeatId = seat.SeatId,
+                        DiscountId = null,
                         BookingDate = bookingDate, // 🌟 Gán thời gian đồng nhất (dùng để gom nhóm khi thanh toán)
                         TicketPrice = pricing.Price,
                         DiscountAmt = 0,
                         TotalAmount = pricing.Price,
                         BookingType = request.BookingType.Trim(),
-                        StaffId     = staffId,
-                        Status      = ValidationMessages.StutusComfirmed
+                        StaffId = staffId,
+                        Status = ValidationMessages.StutusComfirmed
                     }, pricing.Price));
                 }
 
@@ -330,15 +331,15 @@ namespace RapchieuPhim.API.Services
                     //chia tổng số tiền giam giá cho từng ghê 
                     decimal discountPerSeat = Math.Floor(totalDiscountAmt / seats.Count);
                     //Tính số tiền dư (phần lẻ còn sót lại sau khi làm tròn).
-                    decimal remainder       = totalDiscountAmt - discountPerSeat * seats.Count;
+                    decimal remainder = totalDiscountAmt - discountPerSeat * seats.Count;
 
                     for (int i = 0; i < createdBookings.Count; i++)
                     {
-                        decimal thisDiscount     = discountPerSeat + (i == createdBookings.Count - 1 ? remainder : 0);
-                        var (booking, price)     = createdBookings[i];
-                        booking.DiscountId       = discountId;
-                        booking.DiscountAmt      = thisDiscount;
-                        booking.TotalAmount      = price - thisDiscount;
+                        decimal thisDiscount = discountPerSeat + (i == createdBookings.Count - 1 ? remainder : 0);
+                        var (booking, price) = createdBookings[i];
+                        booking.DiscountId = discountId;
+                        booking.DiscountAmt = thisDiscount;
+                        booking.TotalAmount = price - thisDiscount;
                     }
                 }
 
@@ -352,12 +353,12 @@ namespace RapchieuPhim.API.Services
                     string ticketCode = "TIC" + Guid.NewGuid().ToString().Replace("-", "").Substring(0, 7).ToUpper();
                     _context.Tickets.Add(new Ticket
                     {
-                        BookingId  = booking.BookingId,
+                        BookingId = booking.BookingId,
                         TicketCode = ticketCode,
-                        QrCodeUrl  = null,               // ⏳ Chưa sinh QR — chờ thanh toán thành công
-                        Price      = booking.TotalAmount,
-                        IssuedAt   = DateTime.Now,
-                        Status     = PaymentMessages.StatusPending           // Vé chờ xác nhận thanh toán
+                        QrCodeUrl = null,               // ⏳ Chưa sinh QR — chờ thanh toán thành công
+                        Price = booking.TotalAmount,
+                        IssuedAt = DateTime.Now,
+                        Status = PaymentMessages.StatusPending           // Vé chờ xác nhận thanh toán
                     });
                     await _context.SaveChangesAsync();
                     newBookingIds.Add(booking.BookingId);
@@ -378,9 +379,9 @@ namespace RapchieuPhim.API.Services
                     {
                         _context.Userdiscountusages.Add(new Userdiscountusage
                         {
-                            UserId     = finalUserId,
+                            UserId = finalUserId,
                             DiscountId = discount.DiscountId,
-                            UsedCount  = 1,
+                            UsedCount = 1,
                             LastUsedAt = DateTime.Now
                         });
                     }
@@ -389,21 +390,21 @@ namespace RapchieuPhim.API.Services
 
                 // ── BƯỚC 9: Tạo Order + OrderItems nếu khách có đặt đồ ăn ───────
                 // [NOTE]: Tạo và tính toán hóa đơn đồ ăn mua kèm nếu danh sách tạm có dữ liệu
-                decimal foodTotal  = 0;
-                int?    newOrderId = null;
-                var     orderItemResponses = new List<OrderItemSummary>();// Danh sách trả về cho Frontend hiển thị
+                decimal foodTotal = 0;
+                int? newOrderId = null;
+                var orderItemResponses = new List<OrderItemSummary>();// Danh sách trả về cho Frontend hiển thị
 
                 if (preparedOrderItems.Any())
                 {
                     var order = new Order
                     {
-                        UserId      = finalUserId,
-                        BookingId   = newBookingIds.FirstOrDefault(),
-                        StaffId     = staffId,
-                        OrderDate   = DateTime.Now,
+                        UserId = finalUserId,
+                        BookingId = newBookingIds.FirstOrDefault(),
+                        StaffId = staffId,
+                        OrderDate = DateTime.Now,
                         TotalAmount = 0,        // Cập nhật sau khi tính xong
-                        OrderType   = request.BookingType.Trim(),
-                        Status      = ValidationMessages.StutusComfirmed
+                        OrderType = request.BookingType.Trim(),
+                        Status = ValidationMessages.StutusComfirmed
                     };
                     _context.Orders.Add(order);
                     await _context.SaveChangesAsync(); // Lấy OrderId
@@ -415,12 +416,12 @@ namespace RapchieuPhim.API.Services
 
                         _context.Orderitems.Add(new Orderitem
                         {
-                            OrderId   = order.OrderId,
-                            FoodId    = foodId,
-                            ComboId   = comboId,
-                            Quantity  = qty,
+                            OrderId = order.OrderId,
+                            FoodId = foodId,
+                            ComboId = comboId,
+                            Quantity = qty,
                             UnitPrice = unitPrice,
-                            Subtotal  = subtotal
+                            Subtotal = subtotal
                         });
 
                         // [NOTE]: Trừ tồn kho (Quantity) trong DB để tránh bán quá lượng tồn
@@ -437,12 +438,12 @@ namespace RapchieuPhim.API.Services
 
                         orderItemResponses.Add(new OrderItemSummary
                         {
-                            Name      = name,
-                            FoodId    = foodId,
-                            ComboId   = comboId,
+                            Name = name,
+                            FoodId = foodId,
+                            ComboId = comboId,
                             UnitPrice = unitPrice,
-                            Quantity  = qty,
-                            Subtotal  = subtotal
+                            Quantity = qty,
+                            Subtotal = subtotal
                         });
                     }
 
@@ -453,26 +454,26 @@ namespace RapchieuPhim.API.Services
                 }
 
                 // [NOTE]: Hoàn tất và ghi nhận toàn bộ dữ liệu xuống database
-                await transaction.CommitAsync(); 
+                await transaction.CommitAsync();
 
                 // ── BƯỚC 10: Tổng hợp dữ liệu phản hồi (Response Summary) ────────────────────────────────────
                 // [NOTE]: Tính tổng tiền vé sau giảm giá và tổng tiền cuối cùng bao gồm đồ ăn (GrandTotal)
                 decimal ticketAfterDiscount = ticketTotal - totalDiscountAmt;
-                decimal grandTotal          = ticketAfterDiscount + foodTotal;
+                decimal grandTotal = ticketAfterDiscount + foodTotal;
 
                 var summary = new BookingSummaryResponse
                 {
-                    BookingIds      = newBookingIds,
-                    OrderId         = newOrderId,
+                    BookingIds = newBookingIds,
+                    OrderId = newOrderId,
 
-                    TicketTotal     = ticketTotal,
-                    DiscountAmt     = totalDiscountAmt,
+                    TicketTotal = ticketTotal,
+                    DiscountAmt = totalDiscountAmt,
                     TicketAfterDiscount = ticketAfterDiscount,
 
-                    FoodTotal       = foodTotal,
-                    OrderItems      = orderItemResponses,
+                    FoodTotal = foodTotal,
+                    OrderItems = orderItemResponses,
 
-                    GrandTotal      = grandTotal
+                    GrandTotal = grandTotal
                 };
 
                 return (true, ValidationMessages.CreateBookingSuccess, summary);
