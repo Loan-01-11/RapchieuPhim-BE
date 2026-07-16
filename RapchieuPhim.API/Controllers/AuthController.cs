@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using RapchieuPhim.API.Constants;
 using RapchieuPhim.API.DTO.DTORequest;
 using RapchieuPhim.API.Services;
+using System.Security.Claims;
 
 namespace RapchieuPhim.API.Controllers
 {
@@ -126,6 +127,24 @@ namespace RapchieuPhim.API.Controllers
                 return BadRequest(new { Message = GetFirstError() });
 
             var result = await _authService.VerifyResetCodeAsync(request);
+            return StatusCode(result.StatusCode, new { result.Message });
+        }
+
+        // ── 8. ĐỔI MẬT KHẨU KHI ĐANG ĐĂNG NHẬP ────────────────────────────────
+        // POST: api/Auth/ChangePassword
+        // Body: { "currentPassword": "...", "newPassword": "...", "confirmPassword": "..." }
+        // 🔐 Cần đăng nhập — tự động lấy userId từ JWT token, không cần truyền ID thủ công
+        [HttpPost("ChangePassword")]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new { Message = GetFirstError() });
+
+            // Lấy userId từ JWT Claims (khỏi cần truyền qua body, an toàn hơn)
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            var result = await _authService.ChangePasswordAsync(userId, request);
             return StatusCode(result.StatusCode, new { result.Message });
         }
 

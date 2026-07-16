@@ -23,6 +23,7 @@ namespace RapchieuPhim.API.Services
         Task<(bool IsSuccess, string Message, int StatusCode, object? Data)> ForgotPasswordAsync(ForgotPasswordRequest request);
         Task<(bool IsSuccess, string Message, int StatusCode, object? Data)> ResetPasswordAsync(ResetPasswordRequest request);
         Task<(bool IsSuccess, string Message, int StatusCode, object? Data)> VerifyResetCodeAsync(VerifyResetCodeRequest request);
+        Task<(bool IsSuccess, string Message, int StatusCode, object? Data)> ChangePasswordAsync(int userId, ChangePasswordRequest request);
     }
 
     public class AuthService : IAuthService
@@ -279,6 +280,37 @@ namespace RapchieuPhim.API.Services
                 return (false, ValidationMessages.OtpInvalidOrExpired, 400, null);
 
             return await Task.FromResult((true, ValidationMessages.OtpValid, 200, (object?)null));
+        }
+
+        // ── 8. ĐỔI MẬT KHẨU KHI ĐANG ĐĂNG NHẬP ─────────────────────────────
+        // Yêu cầu: user phải cung cấp đúng mật khẩu hiện tại trước khi đổi
+        public async Task<(bool IsSuccess, string Message, int StatusCode, object? Data)> ChangePasswordAsync(int userId, ChangePasswordRequest request)
+        {
+            // Xác nhận mật khẩu mới và mật khẩu xác nhận phải khớp nhau
+            if (request.NewPassword != request.ConfirmPassword)
+                return (false, ValidationMessages.ConfirmPasswordMismatch, 400, null);
+
+            // Không cho phép đặt mật khẩu mới trùng với mật khẩu cũ
+            if (request.NewPassword == request.CurrentPassword)
+                return (false, "Mật khẩu mới không được trùng với mật khẩu hiện tại.", 400, null);
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null || !user.IsActive)
+                return (false, ValidationMessages.UserNotFound, 404, null);
+
+            // User đăng ký qua Google không có mật khẩu thật → không cho đổi theo luồng này
+            if (string.IsNullOrEmpty(user.PasswordHash))
+                return (false, "Tài khoản Google không thể đổi mật khẩu theo cách này.", 400, null);
+
+            // Xác minh mật khẩu hiện tại nhập vào có đúng không
+            if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+                return (false, "Mật khẩu hiện tại không chính xác.", 400, null);
+
+            // Băm mật khẩu mới và lưu xuống DB
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            await _context.SaveChangesAsync();
+
+            return (true, "Đổi mật khẩu thành công! Vui lòng đăng nhập lại.", 200, null);
         }
 
         // ── Private Helpers ──────────────────────────────────────────────────
