@@ -263,6 +263,63 @@ namespace RapchieuPhim.API.Services
                 return (false, "Xác thực Webhook Sepay thất bại. API Key không hợp lệ.");
             }
 
+            // Bước 1.1: Kiểm tra xem có phải thanh toán cho Đơn hàng Combo/Đồ ăn riêng lẻ (CB <OrderId>)
+            var comboMatch = System.Text.RegularExpressions.Regex.Match(
+                request.TransactionContent ?? "",
+                @"(?i)(CB)\s*(\d+)"
+            );
+
+            if (comboMatch.Success && int.TryParse(comboMatch.Groups[2].Value, out int orderId))
+            {
+                Console.WriteLine($"[Sepay Webhook] Phát hiện thanh toán Combo/Đồ ăn riêng lẻ. OrderId: {orderId}");
+                var order = await _context.Orders.FindAsync(orderId);
+                if (order == null)
+                {
+                    Console.WriteLine($"[Sepay Webhook THẤT BẠI] Không tìm thấy đơn hàng OrderId = {orderId}");
+                    return (false, $"Không tìm thấy đơn hàng đồ ăn có mã OrderId = {orderId}");
+                }
+
+                if (order.Status == "Confirmed")
+                {
+                    Console.WriteLine($"[Sepay Webhook] Đơn hàng OrderId = {orderId} đã Confirmed từ trước.");
+                    return (true, $"Đơn hàng {orderId} đã được xác nhận thanh toán trước đó.");
+                }
+
+                if (request.AmountIn < order.TotalAmount)
+                {
+                    Console.WriteLine($"[Sepay Webhook THẤT BẠI] Số tiền chuyển ({request.AmountIn:N0}) < Tổng tiền đơn hàng ({order.TotalAmount:N0})");
+                    return (false, $"Số tiền chuyển khoản ({request.AmountIn:N0}) < số tiền đơn hàng ({order.TotalAmount:N0})");
+                }
+
+                order.Status = "Confirmed";
+
+                // Lưu bản ghi Payment cho đơn hàng đồ ăn (OrderId) để quản lý doanh thu
+                var paymentExists = await _context.Payments.AnyAsync(p => p.OrderId == orderId && p.PaymentStatus == PaymentMessages.StatusSuccess);
+                if (!paymentExists)
+                {
+                    var comboPayment = new Payment
+                    {
+                        OrderId = orderId,
+                        UserId = order.UserId,
+                        StaffId = order.StaffId,
+                        PaymentMethod = PaymentMessages.MethodQrCode,
+                        SubTotal = order.TotalAmount,
+                        DiscountAmt = 0,
+                        TotalAmount = order.TotalAmount,
+                        TransactionId = request.ReferenceNumber,
+                        CreatedAt = DateTime.Now,
+                        PaidAt = DateTime.Now,
+                        PaymentStatus = PaymentMessages.StatusSuccess,
+                        Notes = $"[Sepay Auto CB] Đối soát thành công lúc {DateTime.Now:dd/MM/yyyy HH:mm:ss}."
+                    };
+                    _context.Payments.Add(comboPayment);
+                }
+
+                await _context.SaveChangesAsync();
+                Console.WriteLine($"[Sepay Webhook THÀNH CÔNG] Đã xác nhận đơn hàng Combo OrderId = {orderId}");
+                return (true, $"Thanh toán thành công cho đơn hàng Combo/Đồ ăn ID = {orderId}");
+            }
+
             // Bước 2: Trích xuất BookingId đại diện từ nội dung chuyển khoản
             // Ví dụ: "THANH TOAN VE CP DAT VE 10" → lấy ra số 10
             var match = System.Text.RegularExpressions.Regex.Match(

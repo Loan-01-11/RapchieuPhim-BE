@@ -105,12 +105,12 @@ namespace RapchieuPhim.API.Services
                     Quantity = f.Quantity,
                     ImageUrl = f.ImageUrl,
                     IsAvailable = f.IsAvailable,
-                    SoldThisMonth = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Month == DateTime.Now.Month && oi.Order.OrderDate.Year == DateTime.Now.Year).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
-                    RevenueThisMonth = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Month == DateTime.Now.Month && oi.Order.OrderDate.Year == DateTime.Now.Year).Sum(oi => (decimal?)oi.Subtotal) ?? 0m : 0m,
-                    SoldToday = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Date == DateTime.Now.Date).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
-                    RevenueToday = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Date == DateTime.Now.Date).Sum(oi => (decimal?)oi.Subtotal) ?? 0m : 0m,
-                    SoldThisWeek = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate >= DateTime.Now.AddDays(-7)).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
-                    RevenueThisWeek = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate >= DateTime.Now.AddDays(-7)).Sum(oi => (decimal?)oi.Subtotal) ?? 0m : 0m
+                    SoldThisMonth = 0,
+                    RevenueThisMonth = 0m,
+                    SoldToday = 0,
+                    RevenueToday = 0m,
+                    SoldThisWeek = 0,
+                    RevenueThisWeek = 0m
                 })
                 .ToListAsync();
         }
@@ -132,12 +132,12 @@ namespace RapchieuPhim.API.Services
                     Quantity = f.Quantity,
                     ImageUrl = f.ImageUrl,
                     IsAvailable = f.IsAvailable,
-                    SoldThisMonth = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Month == DateTime.Now.Month && oi.Order.OrderDate.Year == DateTime.Now.Year).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
-                    RevenueThisMonth = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Month == DateTime.Now.Month && oi.Order.OrderDate.Year == DateTime.Now.Year).Sum(oi => (decimal?)oi.Subtotal) ?? 0m : 0m,
-                    SoldToday = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Date == DateTime.Now.Date).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
-                    RevenueToday = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate.Date == DateTime.Now.Date).Sum(oi => (decimal?)oi.Subtotal) ?? 0m : 0m,
-                    SoldThisWeek = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate >= DateTime.Now.AddDays(-7)).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
-                    RevenueThisWeek = f.Orderitems != null ? f.Orderitems.Where(oi => oi.Order.OrderDate >= DateTime.Now.AddDays(-7)).Sum(oi => (decimal?)oi.Subtotal) ?? 0m : 0m
+                    SoldThisMonth = 0,
+                    RevenueThisMonth = 0m,
+                    SoldToday = 0,
+                    RevenueToday = 0m,
+                    SoldThisWeek = 0,
+                    RevenueThisWeek = 0m
                 })
                 .ToListAsync();
         }
