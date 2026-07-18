@@ -52,6 +52,18 @@ namespace RapchieuPhim.API.Controllers
             return Ok(ticket);
         }
 
+        // GET: api/Tickets/Public/{ticketCode} 🔓 (Xem thông tin vé công khai không cần login - Dành cho khách quét QR bằng điện thoại)
+        [HttpGet("Public/{ticketCode}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetPublicByCode(string ticketCode)
+        {
+            var ticket = await _ticketService.GetByCodeAsync(ticketCode);
+            if (ticket == null)
+                return NotFound(new { Message = ValidationMessages.TicketNotFoundWithCode(ticketCode) });
+
+            return Ok(ticket);
+        }
+
         // GET: api/Tickets/ByBooking/{bookingId} 🔓 (Mọi vai trò đều xem được vé của đơn Booking)
         [HttpGet("ByBooking/{bookingId}")]
         public async Task<IActionResult> GetByBooking(int bookingId)
@@ -100,8 +112,8 @@ namespace RapchieuPhim.API.Controllers
             return StatusCode(result.StatusCode, new
             {
                 IsSuccess = result.IsSuccess,
-                Message   = result.Message,
-                Ticket    = result.Ticket
+                Message = result.Message,
+                Ticket = result.Ticket
             });
         }
     }

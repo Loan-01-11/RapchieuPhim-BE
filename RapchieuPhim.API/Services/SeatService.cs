@@ -127,6 +127,8 @@ namespace RapchieuPhim.API.Services
             };
 
             _context.Seats.Add(seat);
+            var room = await _context.Rooms.FindAsync(request.RoomId);
+            if (room != null) room.TotalSeats += 1;
             await _context.SaveChangesAsync();
 
             return (true, SeatMessages.CreateSeatSuccess, 201, seat);
@@ -180,6 +182,8 @@ namespace RapchieuPhim.API.Services
             if (newSeats.Count > 0)
             {
                 _context.Seats.AddRange(newSeats);
+                var room = await _context.Rooms.FindAsync(request.RoomId);
+                if (room != null) room.TotalSeats += newSeats.Count;
                 await _context.SaveChangesAsync();
             }
 
@@ -266,6 +270,9 @@ namespace RapchieuPhim.API.Services
             var seat = await _context.Seats.FindAsync(id);
             if (seat == null)
                 return (false, ValidationMessages.SeatNotFoundWithId(id), 404, null);
+
+            var room = await _context.Rooms.FindAsync(seat.RoomId);
+            if (room != null && room.TotalSeats > 0) room.TotalSeats -= 1;
 
             _context.Seats.Remove(seat);
             await _context.SaveChangesAsync();

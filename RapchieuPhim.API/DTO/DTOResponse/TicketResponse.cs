@@ -15,5 +15,7 @@ namespace RapchieuPhim.API.DTOs.DTOResponse
         public string? AreaName { get; set; }
         public string? CinemaName { get; set; }
         public string? RoomName { get; set; }
+
+        public List<BookingFoodDetailResponse> Foods { get; set; } = new();
     }
 }

@@ -20,5 +20,14 @@ namespace RapchieuPhim.API.DTOs.DTOResponse
         public string Status { get; set; } = null!;
         public DateTime BookingDate { get; set; }
         public string? TicketCode { get; set; }
+
+        public List<BookingFoodDetailResponse> Foods { get; set; } = new();
+    }
+
+    public class BookingFoodDetailResponse
+    {
+        public string Name { get; set; } = null!;
+        public int Quantity { get; set; }
+        public decimal Price { get; set; }
     }
 }

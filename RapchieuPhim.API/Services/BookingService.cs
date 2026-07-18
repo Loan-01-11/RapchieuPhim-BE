@@ -109,6 +109,33 @@ namespace RapchieuPhim.API.Services
                     TicketCode = _context.Tickets.Where(tk => tk.BookingId == b.BookingId).Select(tk => tk.TicketCode).FirstOrDefault()
                 }).ToListAsync();
 
+            var bookingIds = data.Select(b => b.BookingId).ToList();
+            var orders = await _context.Orders
+                .Include(o => o.Orderitems)
+                .ThenInclude(oi => oi.Food)
+                .Include(o => o.Orderitems)
+                .ThenInclude(oi => oi.Combo)
+                .Where(o => o.BookingId.HasValue && bookingIds.Contains(o.BookingId.Value))
+                .ToListAsync();
+
+            foreach (var b in data)
+            {
+                var order = orders.FirstOrDefault(o => o.BookingId == b.BookingId);
+                if (order != null)
+                {
+                    foreach (var oi in order.Orderitems)
+                    {
+                        var name = oi.Food?.FoodName ?? oi.Combo?.ComboName ?? "Đồ ăn kèm";
+                        b.Foods.Add(new BookingFoodDetailResponse
+                        {
+                            Name = name,
+                            Quantity = oi.Quantity,
+                            Price = oi.UnitPrice
+                        });
+                    }
+                }
+            }
+
             return (true, ValidationMessages.GetHistorySuccess, data);
         }
 

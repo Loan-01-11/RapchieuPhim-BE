@@ -1,4 +1,7 @@
+
+
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using RapchieuPhim.API.Constants;
 using RapchieuPhim.API.DTOs.DTORequest;
 using RapchieuPhim.API.DTOs.DTOResponse;
@@ -28,10 +31,12 @@ namespace RapchieuPhim.API.Services
     public class PaymentService : IPaymentService
     {
         private readonly CinemaManagementContext _context;
+        private readonly IConfiguration _configuration;
 
-        public PaymentService(CinemaManagementContext context)
+        public PaymentService(CinemaManagementContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration;
         }
 
         /// <summary>
@@ -40,29 +45,29 @@ namespace RapchieuPhim.API.Services
         /// </summary>
         private static PaymentResponse MapToResponse(Payment p) => new()
         {
-            PaymentId     = p.PaymentId,
-            BookingId     = p.BookingId,
-            OrderId       = p.OrderId,
-            UserId        = p.UserId,
-            StaffId       = p.StaffId,
+            PaymentId = p.PaymentId,
+            BookingId = p.BookingId,
+            OrderId = p.OrderId,
+            UserId = p.UserId,
+            StaffId = p.StaffId,
             PaymentMethod = p.PaymentMethod,
-            SubTotal      = p.SubTotal,
-            DiscountAmt   = p.DiscountAmt,
-            TotalAmount   = p.TotalAmount,
+            SubTotal = p.SubTotal,
+            DiscountAmt = p.DiscountAmt,
+            TotalAmount = p.TotalAmount,
             TransactionId = p.TransactionId,
-            CreatedAt     = p.CreatedAt,
-            PaidAt        = p.PaidAt,
+            CreatedAt = p.CreatedAt,
+            PaidAt = p.PaidAt,
             PaymentStatus = p.PaymentStatus,
-            Notes         = p.Notes,
+            Notes = p.Notes,
 
             // QR VietQR ngân hàng (chứa tổng tiền toàn giao dịch, dùng để chuyển khoản)
-            QrCodeUrl     = (p.PaymentMethod == PaymentMessages.MethodQrCode) && p.BookingId.HasValue
+            QrCodeUrl = (p.PaymentMethod == PaymentMessages.MethodQrCode) && p.BookingId.HasValue
                             ? PaymentMessages.GenerateVietQrUrl(p.TotalAmount, p.BookingId.Value)
                             : null,
 
-            BankId        = (p.PaymentMethod == PaymentMessages.MethodQrCode) ? PaymentMessages.BankId : null,
-            AccountNo     = (p.PaymentMethod == PaymentMessages.MethodQrCode) ? PaymentMessages.AccountNo : null,
-            AccountName   = (p.PaymentMethod == PaymentMessages.MethodQrCode) ? PaymentMessages.AccountName : null,
+            BankId = (p.PaymentMethod == PaymentMessages.MethodQrCode) ? PaymentMessages.BankId : null,
+            AccountNo = (p.PaymentMethod == PaymentMessages.MethodQrCode) ? PaymentMessages.AccountNo : null,
+            AccountName = (p.PaymentMethod == PaymentMessages.MethodQrCode) ? PaymentMessages.AccountName : null,
 
             // Nội dung chuyển khoản (Ví dụ: "THANH TOAN VE CP DAT VE 10")
             // BookingId ở đây là booking đại diện đầu tiên của cả nhóm ghế
@@ -138,15 +143,15 @@ namespace RapchieuPhim.API.Services
             //    → Cộng dồn tiền của TẤT CẢ ghế trong cùng đợt đặt vào 1 thanh toán
             // ─────────────────────────────────────────────────────────────────────
             var batchBookings = await _context.Bookings
-                .Where(b => b.UserId     == booking.UserId
+                .Where(b => b.UserId == booking.UserId
                          && b.ShowTimeId == booking.ShowTimeId
                          && b.BookingDate == booking.BookingDate)
                 .ToListAsync();
 
             // Bước 4: Cộng dồn tiền của toàn bộ ghế trong nhóm
-            decimal subTotal    = batchBookings.Sum(b => b.TicketPrice);
+            decimal subTotal = batchBookings.Sum(b => b.TicketPrice);
             decimal discountAmt = batchBookings.Sum(b => b.DiscountAmt);
-            decimal total       = batchBookings.Sum(b => b.TotalAmount);
+            decimal total = batchBookings.Sum(b => b.TotalAmount);
 
             // Bước 5: Cộng thêm tiền đồ ăn nếu có
             //Kiểm tra xem khách hàng có gửi kèm mã hóa đơn đồ ăn (OrderId) lên cùng đợt thanh toán này hay không. Nếu có, hệ thống mới nhảy vào xử lý khối lệnh bên trong.
@@ -161,7 +166,7 @@ namespace RapchieuPhim.API.Services
                     return (false, PaymentMessages.OrderBookingMismatch, 400, null);
 
                 subTotal += order.TotalAmount;
-                total    += order.TotalAmount;
+                total += order.TotalAmount;
             }
 
             // Bước 6: Xác định người thực hiện giao dịch
@@ -178,19 +183,19 @@ namespace RapchieuPhim.API.Services
             // BookingId = booking đại diện đầu tiên của cả nhóm (dùng làm mã QR đại diện)
             var payment = new Payment
             {
-                BookingId     = request.BookingId,   // Booking đại diện (ghế đầu tiên)
-                OrderId       = request.OrderId,
-                UserId        = booking.UserId,
-                StaffId       = staffId,
+                BookingId = request.BookingId,   // Booking đại diện (ghế đầu tiên)
+                OrderId = request.OrderId,
+                UserId = booking.UserId,
+                StaffId = staffId,
                 PaymentMethod = request.PaymentMethod.Trim(),
-                SubTotal      = subTotal,            // Tổng tiền của TẤT CẢ ghế (+ đồ ăn)
-                DiscountAmt   = discountAmt,
-                TotalAmount   = total,               // Số tiền thực tế khách phải chuyển khoản
+                SubTotal = subTotal,            // Tổng tiền của TẤT CẢ ghế (+ đồ ăn)
+                DiscountAmt = discountAmt,
+                TotalAmount = total,               // Số tiền thực tế khách phải chuyển khoản
                 TransactionId = request.TransactionId?.Trim(),
-                CreatedAt     = DateTime.Now,
-                PaidAt        = initialStatus == PaymentMessages.StatusSuccess ? DateTime.Now : null,
+                CreatedAt = DateTime.Now,
+                PaidAt = initialStatus == PaymentMessages.StatusSuccess ? DateTime.Now : null,
                 PaymentStatus = initialStatus,
-                Notes         = batchBookings.Count > 1
+                Notes = batchBookings.Count > 1
                                 ? $"[Gom nhóm] {batchBookings.Count} ghế | " + (request.Notes?.Trim() ?? "")
                                 : request.Notes?.Trim()
             };
@@ -198,7 +203,7 @@ namespace RapchieuPhim.API.Services
             _context.Payments.Add(payment);
             await _context.SaveChangesAsync();
 
-            return (true, PaymentMessages.CreateSuccess, 201, MapToResponse(payment));  
+            return (true, PaymentMessages.CreateSuccess, 201, MapToResponse(payment));
         }
 
         /// <summary>
@@ -223,7 +228,7 @@ namespace RapchieuPhim.API.Services
                 return (false, PaymentMessages.InvalidStatus, 400);
 
             payment.PaymentStatus = request.Status;
-            payment.Notes         = request.Notes?.Trim() ?? payment.Notes;
+            payment.Notes = request.Notes?.Trim() ?? payment.Notes;
 
             if (request.Status == PaymentMessages.StatusSuccess)
                 payment.PaidAt = DateTime.Now;
@@ -247,10 +252,16 @@ namespace RapchieuPhim.API.Services
         public async Task<(bool IsSuccess, string Message)> ProcessSepayWebhookAsync(
             SepayWebhookRequest request, string authorizationHeader)
         {
+            Console.WriteLine($"[Sepay Webhook] Nhận yêu cầu đối soát lúc {DateTime.Now}");
+            Console.WriteLine($"[Sepay Webhook] Nội dung CK: '{request.TransactionContent}', Số tiền nhận: {request.AmountIn:N0}đ");
+
             // Bước 1: Xác thực API Key
             string expectedHeader = $"Apikey {PaymentMessages.SepayApiKey}";
             if (string.IsNullOrEmpty(authorizationHeader) || authorizationHeader != expectedHeader)
+            {
+                Console.WriteLine($"[Sepay Webhook THẤT BẠI] Xác thực ApiKey thất bại. Nhận: '{authorizationHeader}', Kì vọng: '{expectedHeader}'");
                 return (false, "Xác thực Webhook Sepay thất bại. API Key không hợp lệ.");
+            }
 
             // Bước 2: Trích xuất BookingId đại diện từ nội dung chuyển khoản
             // Ví dụ: "THANH TOAN VE CP DAT VE 10" → lấy ra số 10
@@ -270,25 +281,36 @@ namespace RapchieuPhim.API.Services
                     int.TryParse(digits[^1].Value, out bookingId);
             }
 
+            Console.WriteLine($"[Sepay Webhook] Mã BookingId trích xuất được: {bookingId}");
+
             if (bookingId == 0)
+            {
+                Console.WriteLine($"[Sepay Webhook THẤT BẠI] Không thể trích xuất BookingId từ nội dung chuyển khoản.");
                 return (false, $"Không thể trích xuất BookingId từ nội dung: '{request.TransactionContent}'");
+            }
 
             // Bước 3: Tìm giao dịch thanh toán đang Pending
             var payment = await _context.Payments
                 .FirstOrDefaultAsync(p => p.BookingId == bookingId
                                        && p.PaymentStatus == PaymentMessages.StatusPending);
             if (payment == null)
+            {
+                Console.WriteLine($"[Sepay Webhook THẤT BẠI] Không tìm thấy giao dịch Pending nào trong database cho BookingId = {bookingId}");
                 return (false, $"Không tìm thấy giao dịch Pending nào cho BookingId = {bookingId}");
+            }
 
             // Bước 4: Kiểm tra số tiền chuyển khoản ≥ số tiền đơn hàng
             if (request.AmountIn < payment.TotalAmount)
+            {
+                Console.WriteLine($"[Sepay Webhook THẤT BẠI] Số tiền chuyển khoản ({request.AmountIn:N0}đ) < số tiền cần thanh toán của đơn hàng ({payment.TotalAmount:N0}đ)");
                 return (false, $"Số tiền chuyển khoản ({request.AmountIn:N0}) < số tiền đơn hàng ({payment.TotalAmount:N0})");
+            }
 
             // Bước 5: Cập nhật Payment → Success
             payment.PaymentStatus = PaymentMessages.StatusSuccess;
-            payment.PaidAt        = DateTime.Now;
+            payment.PaidAt = DateTime.Now;
             payment.TransactionId = request.ReferenceNumber;
-            payment.Notes         = $"[Sepay Auto] Đối soát thành công lúc {DateTime.Now:dd/MM/yyyy HH:mm:ss}. Gateway: {request.Gateway}";
+            payment.Notes = $"[Sepay Auto] Đối soát thành công lúc {DateTime.Now:dd/MM/yyyy HH:mm:ss}. Gateway: {request.Gateway}";
 
             // ─────────────────────────────────────────────────────────────────────
             // 🌟 BƯỚC 6: GOM NHÓM — Tìm toàn bộ Booking cùng đợt đặt vé
@@ -302,10 +324,10 @@ namespace RapchieuPhim.API.Services
             if (rootBooking != null)
             {
                 var siblingIds = await _context.Bookings
-                    .Where(b => b.UserId     == rootBooking.UserId
+                    .Where(b => b.UserId == rootBooking.UserId
                              && b.ShowTimeId == rootBooking.ShowTimeId
                              && b.BookingDate == rootBooking.BookingDate
-                             && b.BookingId  != bookingId)
+                             && b.BookingId != bookingId)
                     .Select(b => b.BookingId)
                     .ToListAsync();
 
@@ -336,17 +358,17 @@ namespace RapchieuPhim.API.Services
                 ticket.Status = ShowtimeMessages.StatusActive;
 
                 // Sinh nội dung đầy đủ nhúng vào QR Code
-                var booking  = ticket.Booking;
+                var booking = ticket.Booking;
                 var showtime = booking?.ShowTime;
-                var movie    = showtime?.Movie;
-                var seat     = booking?.Seat;
+                var movie = showtime?.Movie;
+                var seat = booking?.Seat;
 
-                string movieTitle   = movie?.Title ?? "Phim";
-                string seatInfo     = seat != null ? $"{seat.SeatRow}{seat.SeatNumber}" : "N/A";
+                string movieTitle = movie?.Title ?? "Phim";
+                string seatInfo = seat != null ? $"{seat.SeatRow}{seat.SeatNumber}" : "N/A";
                 string showtimeInfo = showtime != null
                     ? showtime.StartTime.ToString("dd/MM/yyyy HH:mm")
                     : "N/A";
-                string priceInfo    = booking != null
+                string priceInfo = booking != null
                     ? $"{booking.TotalAmount:N0} VND"
                     : "N/A";
 
@@ -370,7 +392,7 @@ namespace RapchieuPhim.API.Services
                     ? string.Join(",", allFoodComboParts)
                     : string.Empty;
 
-                // Nội dung text nhúng vào QR (scan ra sẽ hiện đầy đủ)
+                // Nội dung text nhúng vào QR (scan ra sẽ hiện văn bản thô đầy đủ chi tiết vé và đồ ăn)
                 string qrData = $"VE:{ticket.TicketCode}|PHIM:{movieTitle}|SUAT:{showtimeInfo}|GHE:{seatInfo}|GIA:{priceInfo}|TRANG_THAI:{ticket.Status}";
                 if (!string.IsNullOrEmpty(foodInfo))
                     qrData += $"|DO_AN:{foodInfo}";
@@ -382,6 +404,7 @@ namespace RapchieuPhim.API.Services
 
             await _context.SaveChangesAsync();
 
+            Console.WriteLine($"[Sepay Webhook THÀNH CÔNG] Đã đối soát thành công và kích hoạt {tickets.Count} vé cho {allBatchBookingIds.Count} ghế!");
             return (true, $"Đối soát Sepay thành công. " +
                           $"Đã kích hoạt {tickets.Count} vé cho {allBatchBookingIds.Count} ghế.");
         }

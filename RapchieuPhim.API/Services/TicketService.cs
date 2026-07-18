@@ -1,3 +1,6 @@
+
+
+
 using Microsoft.EntityFrameworkCore;
 using RapchieuPhim.API.Constants;
 using RapchieuPhim.API.DTOs.DTORequest;
@@ -29,106 +32,58 @@ namespace RapchieuPhim.API.Services
 
         public async Task<List<TicketResponse>> GetAllAsync()
         {
-            return await _context.Tickets
+            var list = await _context.Tickets
                 .Include(t => t.Booking).ThenInclude(b => b.User)
                 .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Movie)
                 .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Room).ThenInclude(r => r.Cinema).ThenInclude(c => c.Area)
                 .Include(t => t.Booking).ThenInclude(b => b.Seat)
-                .Select(t => new TicketResponse
-                {
-                    TicketId = t.TicketId,
-                    BookingId = t.BookingId,
-                    TicketCode = t.TicketCode,
-                    QrCodeUrl = t.QrCodeUrl,
-                    Price = t.Price,
-                    IssuedAt = t.IssuedAt,
-                    Status = t.Status,
-                    CustomerName = t.Booking.User != null ? t.Booking.User.FullName : "Khách vãng lai",
-                    MovieTitle = t.Booking.ShowTime.Movie != null ? t.Booking.ShowTime.Movie.Title : "N/A",
-                    SeatCode = t.Booking.Seat != null ? (t.Booking.Seat.SeatRow + t.Booking.Seat.SeatNumber) : "N/A",
-                    AreaName = t.Booking.ShowTime.Room != null && t.Booking.ShowTime.Room.Cinema != null && t.Booking.ShowTime.Room.Cinema.Area != null ? t.Booking.ShowTime.Room.Cinema.Area.AreaName : "N/A",
-                    CinemaName = t.Booking.ShowTime.Room != null && t.Booking.ShowTime.Room.Cinema != null ? t.Booking.ShowTime.Room.Cinema.CinemaName : "N/A",
-                    RoomName = t.Booking.ShowTime.Room != null ? t.Booking.ShowTime.Room.RoomName : "N/A"
-                }).ToListAsync();
+                .Include(t => t.Booking).ThenInclude(b => b.Orders).ThenInclude(o => o.Orderitems).ThenInclude(oi => oi.Food)
+                .Include(t => t.Booking).ThenInclude(b => b.Orders).ThenInclude(o => o.Orderitems).ThenInclude(oi => oi.Combo)
+                .ToListAsync();
+            return list.Select(MapToResponse).ToList();
         }
 
         public async Task<TicketResponse?> GetByIdAsync(int id)
         {
-            return await _context.Tickets
+            var ticket = await _context.Tickets
                 .Include(t => t.Booking).ThenInclude(b => b.User)
                 .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Movie)
                 .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Room).ThenInclude(r => r.Cinema).ThenInclude(c => c.Area)
                 .Include(t => t.Booking).ThenInclude(b => b.Seat)
+                .Include(t => t.Booking).ThenInclude(b => b.Orders).ThenInclude(o => o.Orderitems).ThenInclude(oi => oi.Food)
+                .Include(t => t.Booking).ThenInclude(b => b.Orders).ThenInclude(o => o.Orderitems).ThenInclude(oi => oi.Combo)
                 .Where(t => t.TicketId == id)
-                .Select(t => new TicketResponse
-                {
-                    TicketId = t.TicketId,
-                    BookingId = t.BookingId,
-                    TicketCode = t.TicketCode,
-                    QrCodeUrl = t.QrCodeUrl,
-                    Price = t.Price,
-                    IssuedAt = t.IssuedAt,
-                    Status = t.Status,
-                    CustomerName = t.Booking.User != null ? t.Booking.User.FullName : "Khách vãng lai",
-                    MovieTitle = t.Booking.ShowTime.Movie != null ? t.Booking.ShowTime.Movie.Title : "N/A",
-                    SeatCode = t.Booking.Seat != null ? (t.Booking.Seat.SeatRow + t.Booking.Seat.SeatNumber) : "N/A",
-                    AreaName = t.Booking.ShowTime.Room != null && t.Booking.ShowTime.Room.Cinema != null && t.Booking.ShowTime.Room.Cinema.Area != null ? t.Booking.ShowTime.Room.Cinema.Area.AreaName : "N/A",
-                    CinemaName = t.Booking.ShowTime.Room != null && t.Booking.ShowTime.Room.Cinema != null ? t.Booking.ShowTime.Room.Cinema.CinemaName : "N/A",
-                    RoomName = t.Booking.ShowTime.Room != null ? t.Booking.ShowTime.Room.RoomName : "N/A"
-                }).FirstOrDefaultAsync();
+                .FirstOrDefaultAsync();
+            return ticket == null ? null : MapToResponse(ticket);
         }
 
         public async Task<TicketResponse?> GetByCodeAsync(string ticketCode)
         {
             var cleanCode = ticketCode.Trim();
-            return await _context.Tickets
+            var ticket = await _context.Tickets
                 .Include(t => t.Booking).ThenInclude(b => b.User)
                 .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Movie)
                 .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Room).ThenInclude(r => r.Cinema).ThenInclude(c => c.Area)
                 .Include(t => t.Booking).ThenInclude(b => b.Seat)
+                .Include(t => t.Booking).ThenInclude(b => b.Orders).ThenInclude(o => o.Orderitems).ThenInclude(oi => oi.Food)
+                .Include(t => t.Booking).ThenInclude(b => b.Orders).ThenInclude(o => o.Orderitems).ThenInclude(oi => oi.Combo)
                 .Where(t => t.TicketCode == cleanCode)
-                .Select(t => new TicketResponse
-                {
-                    TicketId = t.TicketId,
-                    BookingId = t.BookingId,
-                    TicketCode = t.TicketCode,
-                    QrCodeUrl = t.QrCodeUrl,
-                    Price = t.Price,
-                    IssuedAt = t.IssuedAt,
-                    Status = t.Status,
-                    CustomerName = t.Booking.User != null ? t.Booking.User.FullName : "Khách vãng lai",
-                    MovieTitle = t.Booking.ShowTime.Movie != null ? t.Booking.ShowTime.Movie.Title : "N/A",
-                    SeatCode = t.Booking.Seat != null ? (t.Booking.Seat.SeatRow + t.Booking.Seat.SeatNumber) : "N/A",
-                    AreaName = t.Booking.ShowTime.Room != null && t.Booking.ShowTime.Room.Cinema != null && t.Booking.ShowTime.Room.Cinema.Area != null ? t.Booking.ShowTime.Room.Cinema.Area.AreaName : "N/A",
-                    CinemaName = t.Booking.ShowTime.Room != null && t.Booking.ShowTime.Room.Cinema != null ? t.Booking.ShowTime.Room.Cinema.CinemaName : "N/A",
-                    RoomName = t.Booking.ShowTime.Room != null ? t.Booking.ShowTime.Room.RoomName : "N/A"
-                }).FirstOrDefaultAsync();
+                .FirstOrDefaultAsync();
+            return ticket == null ? null : MapToResponse(ticket);
         }
 
         public async Task<List<TicketResponse>> GetByBookingAsync(int bookingId)
         {
-            return await _context.Tickets
+            var list = await _context.Tickets
                 .Include(t => t.Booking).ThenInclude(b => b.User)
                 .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Movie)
                 .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Room).ThenInclude(r => r.Cinema).ThenInclude(c => c.Area)
                 .Include(t => t.Booking).ThenInclude(b => b.Seat)
+                .Include(t => t.Booking).ThenInclude(b => b.Orders).ThenInclude(o => o.Orderitems).ThenInclude(oi => oi.Food)
+                .Include(t => t.Booking).ThenInclude(b => b.Orders).ThenInclude(o => o.Orderitems).ThenInclude(oi => oi.Combo)
                 .Where(t => t.BookingId == bookingId)
-                .Select(t => new TicketResponse
-                {
-                    TicketId = t.TicketId,
-                    BookingId = t.BookingId,
-                    TicketCode = t.TicketCode,
-                    QrCodeUrl = t.QrCodeUrl,
-                    Price = t.Price,
-                    IssuedAt = t.IssuedAt,
-                    Status = t.Status,
-                    CustomerName = t.Booking.User != null ? t.Booking.User.FullName : "Khách vãng lai",
-                    MovieTitle = t.Booking.ShowTime.Movie != null ? t.Booking.ShowTime.Movie.Title : "N/A",
-                    SeatCode = t.Booking.Seat != null ? (t.Booking.Seat.SeatRow + t.Booking.Seat.SeatNumber) : "N/A",
-                    AreaName = t.Booking.ShowTime.Room != null && t.Booking.ShowTime.Room.Cinema != null && t.Booking.ShowTime.Room.Cinema.Area != null ? t.Booking.ShowTime.Room.Cinema.Area.AreaName : "N/A",
-                    CinemaName = t.Booking.ShowTime.Room != null && t.Booking.ShowTime.Room.Cinema != null ? t.Booking.ShowTime.Room.Cinema.CinemaName : "N/A",
-                    RoomName = t.Booking.ShowTime.Room != null ? t.Booking.ShowTime.Room.RoomName : "N/A"
-                }).ToListAsync();
+                .ToListAsync();
+            return list.Select(MapToResponse).ToList();
         }
 
         public async Task<TicketResponse> CreateAsync(TicketCreateRequest request)
@@ -217,6 +172,8 @@ namespace RapchieuPhim.API.Services
                 .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Movie)
                 .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Room).ThenInclude(r => r.Cinema).ThenInclude(c => c.Area)
                 .Include(t => t.Booking).ThenInclude(b => b.Seat)
+                .Include(t => t.Booking).ThenInclude(b => b.Orders).ThenInclude(o => o.Orderitems).ThenInclude(oi => oi.Food)
+                .Include(t => t.Booking).ThenInclude(b => b.Orders).ThenInclude(o => o.Orderitems).ThenInclude(oi => oi.Combo)
                 .FirstOrDefaultAsync(t => t.TicketCode == cleanCode);
 
             if (ticket == null)
@@ -242,24 +199,46 @@ namespace RapchieuPhim.API.Services
         // Helper: chuyển Ticket entity sang TicketResponse
         private static TicketResponse MapToResponse(Ticket ticket)
         {
-            var booking  = ticket.Booking;
+            var booking = ticket.Booking;
             var showtime = booking?.ShowTime;
-            return new TicketResponse
+            var response = new TicketResponse
             {
-                TicketId     = ticket.TicketId,
-                BookingId    = ticket.BookingId,
-                TicketCode   = ticket.TicketCode,
-                QrCodeUrl    = ticket.QrCodeUrl,
-                Price        = ticket.Price,
-                IssuedAt     = ticket.IssuedAt,
-                Status       = ticket.Status,
+                TicketId = ticket.TicketId,
+                BookingId = ticket.BookingId,
+                TicketCode = ticket.TicketCode,
+                QrCodeUrl = ticket.QrCodeUrl,
+                Price = ticket.Price,
+                IssuedAt = ticket.IssuedAt,
+                Status = ticket.Status,
                 CustomerName = booking?.User?.FullName ?? "Khách vãng lai",
-                MovieTitle   = showtime?.Movie?.Title ?? "N/A",
-                SeatCode     = booking?.Seat != null ? (booking.Seat.SeatRow + booking.Seat.SeatNumber) : "N/A",
-                AreaName     = showtime?.Room?.Cinema?.Area?.AreaName ?? "N/A",
-                CinemaName   = showtime?.Room?.Cinema?.CinemaName ?? "N/A",
-                RoomName     = showtime?.Room?.RoomName ?? "N/A"
+                MovieTitle = showtime?.Movie?.Title ?? "N/A",
+                SeatCode = booking?.Seat != null ? (booking.Seat.SeatRow + booking.Seat.SeatNumber) : "N/A",
+                AreaName = showtime?.Room?.Cinema?.Area?.AreaName ?? "N/A",
+                CinemaName = showtime?.Room?.Cinema?.CinemaName ?? "N/A",
+                RoomName = showtime?.Room?.RoomName ?? "N/A"
             };
+
+            if (booking?.Orders != null)
+            {
+                foreach (var order in booking.Orders)
+                {
+                    if (order.Orderitems != null)
+                    {
+                        foreach (var oi in order.Orderitems)
+                        {
+                            var name = oi.Food?.FoodName ?? oi.Combo?.ComboName ?? "Đồ ăn kèm";
+                            response.Foods.Add(new BookingFoodDetailResponse
+                            {
+                                Name = name,
+                                Quantity = oi.Quantity,
+                                Price = oi.UnitPrice
+                            });
+                        }
+                    }
+                }
+            }
+
+            return response;
         }
     }
 }

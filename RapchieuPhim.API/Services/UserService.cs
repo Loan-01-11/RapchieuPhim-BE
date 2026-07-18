@@ -42,7 +42,10 @@ namespace RapchieuPhim.API.Services
                     IsActive = u.IsActive,
                     CreatedAt = u.CreatedAt,
                     DateOfBirth = u.DateOfBirth,
-                    Gender = u.Gender
+                    Gender = u.Gender,
+                    RewardPoint = u.RewardPoint,
+                    MembershipLevel = u.MembershipLevel,
+                    TotalSpent = u.BookingUsers.Sum(b => (decimal?)b.TotalAmount) ?? 0m
                 }).ToListAsync();
         }
 
@@ -162,7 +165,10 @@ namespace RapchieuPhim.API.Services
                     IsActive = u.IsActive,
                     CreatedAt = u.CreatedAt,
                     DateOfBirth = u.DateOfBirth,
-                    Gender = u.Gender
+                    Gender = u.Gender,
+                    RewardPoint = u.RewardPoint,
+                    MembershipLevel = u.MembershipLevel,
+                    TotalSpent = u.BookingUsers.Sum(b => (decimal?)b.TotalAmount) ?? 0m
                 }).ToListAsync();
         }
     }

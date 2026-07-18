@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RapchieuPhim.API.Constants;      // Gọi file hằng số để dùng ValidationMessages
 using RapchieuPhim.API.DTOs.DTORequest; // Gọi khay hứng dữ liệu đầu vào từ Frontend
 using RapchieuPhim.API.DTOs.DTOResponse;// Gọi khay chứa dữ liệu sạch trả về cho Frontend
@@ -47,9 +47,12 @@ namespace RapchieuPhim.API.Services
                     CinemaId = r.CinemaId,
                     RoomName = r.RoomName,
                     RoomType = r.RoomType,
-                    TotalSeats = r.TotalSeats,
+                    TotalSeats = r.Seats.Any() ? r.Seats.Count() : r.TotalSeats,
                     IsActive = r.IsActive
-                }).ToListAsync(); // Thực thi câu lệnh gọi xuống SQL Server
+                })
+                .OrderBy(r => r.RoomName.Length)
+                .ThenBy(r => r.RoomName)
+                .ToListAsync(); // Thực thi câu lệnh gọi xuống SQL Server
         }
 
         /// <summary>
@@ -65,7 +68,7 @@ namespace RapchieuPhim.API.Services
                     CinemaId = r.CinemaId,
                     RoomName = r.RoomName,
                     RoomType = r.RoomType,
-                    TotalSeats = r.TotalSeats,
+                    TotalSeats = r.Seats.Any() ? r.Seats.Count() : r.TotalSeats,
                     IsActive = r.IsActive
                 }).FirstOrDefaultAsync(); // Trả về 1 kết quả đầu tiên tìm thấy hoặc null nếu không có
         }
@@ -84,9 +87,12 @@ namespace RapchieuPhim.API.Services
                     CinemaId = r.CinemaId,
                     RoomName = r.RoomName,
                     RoomType = r.RoomType,
-                    TotalSeats = r.TotalSeats,
+                    TotalSeats = r.Seats.Any() ? r.Seats.Count() : r.TotalSeats,
                     IsActive = r.IsActive
-                }).ToListAsync();
+                })
+                .OrderBy(r => r.RoomName.Length)
+                .ThenBy(r => r.RoomName)
+                .ToListAsync();
         }
 
         /// <summary>
@@ -109,10 +115,73 @@ namespace RapchieuPhim.API.Services
                 IsActive = request.IsActive
             };
 
-            _context.Rooms.Add(room);         // Lệnh xếp hàng chờ đưa vào bảng ROOMS
-            await _context.SaveChangesAsync(); // Lập tức ghi dữ liệu xuống ổ cứng SQL Server
+            _context.Rooms.Add(room);
+            await _context.SaveChangesAsync();
 
-            // Trả về kết quả sau khi tạo thành công (đầy đủ ID tự tăng vừa sinh ra) dưới dạng DTO sạch
+            if (request.TotalSeats > 0)
+            {
+                int totalSeats = request.TotalSeats;
+                int seatsPerRow = 20; // Default to 20 seats per row as seen in UI
+                
+                int totalRows = (int)Math.Ceiling((double)totalSeats / seatsPerRow);
+                int standardRows = totalRows / 3;
+                int vipRows = totalRows / 3;
+                int coupleRows = totalRows - standardRows - vipRows;
+
+                int remainder = totalRows % 3;
+                if (remainder == 1)
+                {
+                    standardRows++;
+                }
+                else if (remainder == 2)
+                {
+                    standardRows++;
+                    vipRows++;
+                }
+
+                var newSeats = new List<Seat>();
+
+                char currentRowChar = 'A';
+                int currentSeatInRow = 1;
+                int currentRowIndex = 1;
+
+                for (int i = 0; i < totalSeats; i++)
+                {
+                    string seatType = "Standard";
+                    if (currentRowIndex > standardRows && currentRowIndex <= standardRows + vipRows)
+                    {
+                        seatType = "VIP";
+                    }
+                    else if (currentRowIndex > standardRows + vipRows)
+                    {
+                        seatType = "Couple";
+                    }
+
+                    string seatNumber = $"{currentRowChar}{currentSeatInRow}";
+                    newSeats.Add(new Seat
+                    {
+                        RoomId = room.RoomId,
+                        SeatRow = currentRowChar.ToString(),
+                        SeatNumber = seatNumber,
+                        SeatType = seatType,
+                        IsActive = true
+                    });
+
+                    currentSeatInRow++;
+
+                    if (currentSeatInRow > seatsPerRow)
+                    {
+                        currentSeatInRow = 1;
+                        currentRowChar++;
+                        currentRowIndex++;
+                    }
+                }
+
+                _context.Seats.AddRange(newSeats);
+                await _context.SaveChangesAsync();
+            }
+
+            // Trả về kết quả sau khi tạo thành công
             return new RoomResponse
             {
                 RoomId = room.RoomId,
@@ -180,10 +249,16 @@ namespace RapchieuPhim.API.Services
             {
                 return (false, ValidationMessages.UnauthorizedDelete, 403); // Từ chối quyền truy cập mã 403
             }
-            _context.Rooms.Remove(room);
-            await _context.SaveChangesAsync(); // Xác nhận lệnh xóa xuống Database
-
-            return (true, ValidationMessages.RoomDeleteSuccess, 200); // Thành công mỹ mãn
+            try
+            {
+                _context.Rooms.Remove(room);
+                await _context.SaveChangesAsync(); // Xác nhận lệnh xóa xuống Database
+                return (true, ValidationMessages.RoomDeleteSuccess, 200); // Thành công mỹ mãn
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+            {
+                return (false, "Không thể xóa phòng chiếu này vì đang có dữ liệu liên kết (lịch chiếu, ghế ngồi...). Vui lòng xóa dữ liệu liên quan trước!", 400);
+            }
         }
     }
 }
