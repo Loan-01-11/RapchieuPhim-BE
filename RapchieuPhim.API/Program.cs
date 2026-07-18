@@ -195,6 +195,30 @@ using (var scope = app.Services.CreateScope()) // 1. Mở một không gian cô 
             // In một dòng chữ màu xanh ra màn hình đen (Console) để báo hiệu cho bạn biết
             Console.WriteLine("➔ [SEED DATA]: Khởi tạo thành công tài khoản Admin mặc định!");
         }
+        // 3b. Sửa chỉ mục UQ_BOOKING_SEAT thành Filtered Index để cho phép đặt lại ghế đã hủy
+        try
+        {
+            var sql = @"
+                IF EXISTS (SELECT * FROM sys.indexes WHERE name = 'UQ_BOOKING_SEAT' AND object_id = OBJECT_ID('BOOKINGS'))
+                BEGIN
+                    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'UQ_BOOKING_SEAT' AND object_id = OBJECT_ID('BOOKINGS') AND has_filter = 1)
+                    BEGIN
+                        DROP INDEX UQ_BOOKING_SEAT ON BOOKINGS;
+                        EXEC('CREATE UNIQUE INDEX UQ_BOOKING_SEAT ON BOOKINGS(ShowTimeId, SeatId) WHERE Status <> ''Cancelled''');
+                        PRINT '➔ [INDEX UPDATE]: Recreated UQ_BOOKING_SEAT as a filtered unique index.';
+                    END
+                END
+                ELSE
+                BEGIN
+                    EXEC('CREATE UNIQUE INDEX UQ_BOOKING_SEAT ON BOOKINGS(ShowTimeId, SeatId) WHERE Status <> ''Cancelled''');
+                    PRINT '➔ [INDEX UPDATE]: Created UQ_BOOKING_SEAT as a filtered unique index.';
+                END";
+            await context.Database.ExecuteSqlRawAsync(sql);
+        }
+        catch (Exception indexEx)
+        {
+            Console.WriteLine("➔ [INDEX UPDATE ERROR]: Could not update UQ_BOOKING_SEAT index. " + indexEx.Message);
+        }
     }
     catch (Exception ex)
     {
