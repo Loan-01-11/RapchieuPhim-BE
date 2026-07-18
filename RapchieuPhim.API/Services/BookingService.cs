@@ -324,7 +324,10 @@ namespace RapchieuPhim.API.Services
                     if (pricing == null)
                         return (false, ValidationMessages.BookingMessages.PricingNotFound, null);
 
-                    ticketTotal += pricing.Price;
+                    decimal studentDiscount = request.IsStudent ? Math.Round(pricing.Price * 0.05m, 0) : 0;
+                    decimal finalPrice = pricing.Price - studentDiscount;
+
+                    ticketTotal += finalPrice;
                     createdBookings.Add((new Booking
                     {
                         UserId = finalUserId,
@@ -333,12 +336,12 @@ namespace RapchieuPhim.API.Services
                         DiscountId = null,
                         BookingDate = bookingDate, // 🌟 Gán thời gian đồng nhất (dùng để gom nhóm khi thanh toán)
                         TicketPrice = pricing.Price,
-                        DiscountAmt = 0,
-                        TotalAmount = pricing.Price,
+                        DiscountAmt = studentDiscount,
+                        TotalAmount = finalPrice,
                         BookingType = request.BookingType.Trim(),
                         StaffId = staffId,
                         Status = ValidationMessages.StutusComfirmed
-                    }, pricing.Price));
+                    }, finalPrice));
                 }
 
                 // 8b. Tính và phân bổ discount vào từng vé

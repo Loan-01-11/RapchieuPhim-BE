@@ -25,6 +25,8 @@ namespace RapchieuPhim.API.DTO.DTORequest
 
         // Danh sách đồ ăn / combo muốn đặt kèm (không bắt buộc)
         public List<OrderItemRequest>? OrderItems { get; set; }
+
+        public bool IsStudent { get; set; }
     }
 
     // ─── Một dòng đồ ăn/combo trong đơn hàng ─────────────────────────────────────
