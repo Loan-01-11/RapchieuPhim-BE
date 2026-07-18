@@ -373,25 +373,75 @@ namespace RapchieuPhim.API.Services
                     }
                 }
 
-                // 8c. Lưu từng Booking + Ticket vào DB
+                // 8c. Lưu từng Booking + Ticket vào DB (hoặc cập nhật nếu đã có bản ghi Cancelled trước đó để tránh vi phạm Unique Constraint)
                 foreach (var (booking, _) in createdBookings)
                 {
-                    _context.Bookings.Add(booking);
-                    await _context.SaveChangesAsync();
+                    var existingBooking = await _context.Bookings
+                        .FirstOrDefaultAsync(b => b.ShowTimeId == booking.ShowTimeId && b.SeatId == booking.SeatId);
 
-                    // [NOTE]: Sinh TicketCode ngẫu nhiên duy nhất
-                    string ticketCode = "TIC" + Guid.NewGuid().ToString().Replace("-", "").Substring(0, 7).ToUpper();
-                    _context.Tickets.Add(new Ticket
+                    if (existingBooking != null)
                     {
-                        BookingId = booking.BookingId,
-                        TicketCode = ticketCode,
-                        QrCodeUrl = null,               // ⏳ Chưa sinh QR — chờ thanh toán thành công
-                        Price = booking.TotalAmount,
-                        IssuedAt = DateTime.Now,
-                        Status = PaymentMessages.StatusPending           // Vé chờ xác nhận thanh toán
-                    });
-                    await _context.SaveChangesAsync();
-                    newBookingIds.Add(booking.BookingId);
+                        // Cập nhật lại bản ghi cũ đã bị hủy
+                        existingBooking.UserId = booking.UserId;
+                        existingBooking.BookingDate = booking.BookingDate;
+                        existingBooking.TicketPrice = booking.TicketPrice;
+                        existingBooking.DiscountAmt = booking.DiscountAmt;
+                        existingBooking.DiscountId = booking.DiscountId;
+                        existingBooking.TotalAmount = booking.TotalAmount;
+                        existingBooking.BookingType = booking.BookingType;
+                        existingBooking.StaffId = booking.StaffId;
+                        existingBooking.Status = booking.Status;
+
+                        await _context.SaveChangesAsync();
+
+                        // Cập nhật hoặc tạo mới Ticket đi kèm
+                        var existingTicket = await _context.Tickets
+                            .FirstOrDefaultAsync(t => t.BookingId == existingBooking.BookingId);
+
+                        string ticketCode = "TIC" + Guid.NewGuid().ToString().Replace("-", "").Substring(0, 7).ToUpper();
+                        if (existingTicket != null)
+                        {
+                            existingTicket.TicketCode = ticketCode;
+                            existingTicket.QrCodeUrl = null;
+                            existingTicket.Price = booking.TotalAmount;
+                            existingTicket.IssuedAt = DateTime.Now;
+                            existingTicket.Status = PaymentMessages.StatusPending;
+                        }
+                        else
+                        {
+                            _context.Tickets.Add(new Ticket
+                            {
+                                BookingId = existingBooking.BookingId,
+                                TicketCode = ticketCode,
+                                QrCodeUrl = null,
+                                Price = booking.TotalAmount,
+                                IssuedAt = DateTime.Now,
+                                Status = PaymentMessages.StatusPending
+                            });
+                        }
+                        await _context.SaveChangesAsync();
+                        newBookingIds.Add(existingBooking.BookingId);
+                    }
+                    else
+                    {
+                        // Tạo mới hoàn toàn
+                        _context.Bookings.Add(booking);
+                        await _context.SaveChangesAsync();
+
+                        // [NOTE]: Sinh TicketCode ngẫu nhiên duy nhất
+                        string ticketCode = "TIC" + Guid.NewGuid().ToString().Replace("-", "").Substring(0, 7).ToUpper();
+                        _context.Tickets.Add(new Ticket
+                        {
+                            BookingId = booking.BookingId,
+                            TicketCode = ticketCode,
+                            QrCodeUrl = null,               // ⏳ Chưa sinh QR — chờ thanh toán thành công
+                            Price = booking.TotalAmount,
+                            IssuedAt = DateTime.Now,
+                            Status = PaymentMessages.StatusPending           // Vé chờ xác nhận thanh toán
+                        });
+                        await _context.SaveChangesAsync();
+                        newBookingIds.Add(booking.BookingId);
+                    }
                 }
 
                 // 8d. Cập nhật thống kê mã giảm giá
