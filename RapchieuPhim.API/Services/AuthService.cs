@@ -32,14 +32,16 @@ namespace RapchieuPhim.API.Services
         private readonly IConfiguration _config;
         private readonly IEmailService _emailService;
         private readonly IMemoryCache _cache;
+        private readonly IHostEnvironment _env;
 
         public AuthService(CinemaManagementContext context, IConfiguration config,
-            IEmailService emailService, IMemoryCache cache)
+            IEmailService emailService, IMemoryCache cache, IHostEnvironment env)
         {
             _context      = context;
             _config       = config;
             _emailService = emailService;
             _cache        = cache;
+            _env          = env;
         }
 
         // ── 1. ĐĂNG NHẬP BẰNG TÀI KHOẢN ────────────────────────────────────
@@ -315,11 +317,11 @@ namespace RapchieuPhim.API.Services
 
         // ── Private Helpers ──────────────────────────────────────────────────
 
-        /// <summary>Xác thực Google ID token, trả null nếu lỗi.</summary>
+        /// <summary>Xác thực Google ID token hoặc Access Token, trả null nếu lỗi.</summary>
         private async Task<GoogleJsonWebSignature.Payload?> VerifyGoogleToken(string idToken)
         {
-            // CỔNG PHỤ: Nếu token là "mock-google-test", trả về thông tin giả lập để test trên Swagger
-            if (idToken == "mock-google-test")
+            // CỔNG PHỤ: Chỉ cho phép dùng token giả lập "mock-google-test" khi ở môi trường Development
+            if (_env.IsDevelopment() && idToken == "mock-google-test")
             {
                 return new GoogleJsonWebSignature.Payload
                 {
@@ -331,9 +333,22 @@ namespace RapchieuPhim.API.Services
 
             try
             {
+                var clientId = _config["Google:ClientId"];
+                var audiences = new List<string>();
+                if (!string.IsNullOrWhiteSpace(clientId) && clientId != "YOUR_GOOGLE_CLIENT_ID_HERE")
+                {
+                    audiences.Add(clientId);
+                }
+
+                // Thêm Client ID OAuth Playground chỉ khi ở môi trường Development để test
+                if (_env.IsDevelopment())
+                {
+                    audiences.Add("407408718192.apps.googleusercontent.com");
+                }
+
                 var settings = new GoogleJsonWebSignature.ValidationSettings
                 {
-                    Audience = new[] { _config["Google:ClientId"] }
+                    Audience = audiences
                 };
                 return await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
             }
@@ -342,6 +357,32 @@ namespace RapchieuPhim.API.Services
                 Console.WriteLine($"[Google Auth Error]: {ex.Message}");
                 if (ex.InnerException != null)
                     Console.WriteLine($"[Inner Exception]: {ex.InnerException.Message}");
+
+                // Fallback: Thử xác thực nếu token truyền vào là Access Token (ya29...) hoặc API userinfo Google
+                try
+                {
+                    using var client = new HttpClient();
+                    var req = new HttpRequestMessage(HttpMethod.Get, "https://www.googleapis.com/oauth2/v3/userinfo");
+                    req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", idToken);
+                    var res = await client.SendAsync(req);
+                    if (res.IsSuccessStatusCode)
+                    {
+                        var json = await res.Content.ReadAsStringAsync();
+                        using var doc = System.Text.Json.JsonDocument.Parse(json);
+                        var root = doc.RootElement;
+                        return new GoogleJsonWebSignature.Payload
+                        {
+                            Email = root.TryGetProperty("email", out var e) ? e.GetString()! : "",
+                            Name = root.TryGetProperty("name", out var n) ? n.GetString()! : "",
+                            Picture = root.TryGetProperty("picture", out var p) ? p.GetString()! : ""
+                        };
+                    }
+                }
+                catch (Exception fallbackEx)
+                {
+                    Console.WriteLine($"[Google Auth Fallback Error]: {fallbackEx.Message}");
+                }
+
                 return null;
             }
         }
