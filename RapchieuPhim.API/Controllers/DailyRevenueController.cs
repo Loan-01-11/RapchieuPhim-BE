@@ -240,21 +240,33 @@ namespace RapchieuPhim.API.Controllers
                 return BadRequest(new { Message = "Không thể xác định rạp chiếu để tạo báo cáo." });
             }
 
-            var summaryText = $"Báo cáo doanh thu ngày {request.Date} được tạo bởi {staffUser.FullName}.\n" +
-                              $"- Tổng doanh thu: {totalRevenue:N0} VND\n" +
-                              $"  + Doanh thu vé: {totalTicketRevenue:N0} VND ({totalBookings} vé)\n" +
-                              $"  + Doanh thu nước/đồ ăn: {totalConcessionRevenue:N0} VND ({totalOrders} đơn hàng)\n" +
-                              $"- Ghi chú: {request.Notes ?? "Không có ghi chú"}";
+            var shiftPrefix = !string.IsNullOrEmpty(request.ShiftName) ? $"[{request.ShiftName.ToUpper()}] " : "";
+            var summaryText = $"{shiftPrefix}Báo cáo kết ca ngày {request.Date} tạo bởi {staffUser.FullName}:\n" +
+                              $"- Tên ca: {request.ShiftName ?? "Ca làm việc"}\n" +
+                              $"- Giờ gửi: {DateTime.Now:HH:mm:ss}\n" +
+                              $"- Doanh thu vé: {totalTicketRevenue:N0}đ ({totalBookings} vé)\n" +
+                              $"- Doanh thu bắp nước: {totalConcessionRevenue:N0}đ ({totalOrders} đơn hàng)\n" +
+                              $"- Doanh thu Tiền mặt: {request.CashRevenue:N0}đ\n" +
+                              $"- Doanh thu Chuyển khoản: {request.TransferRevenue:N0}đ\n" +
+                              $"- Tổng doanh thu ca: {totalRevenue:N0}đ\n" +
+                              $"- Kiểm kê két tiền: Ban đầu: {request.InitialCash:N0}đ | Thực tế: {request.ActualCash:N0}đ | Chênh lệch: {(request.CashDifference >= 0 ? "+" : "")}{request.CashDifference:N0}đ\n" +
+                              $"- Ghi chú: {request.Notes ?? "Không có"}";
 
             var createReportRequest = new CreateStaffReportRequest
             {
                 StaffId = currentUserId,
                 CinemaId = cinemaId,
                 ReportDate = request.Date,
+                ShiftName = request.ShiftName,
                 Summary = summaryText,
                 TotalBookings = totalBookings,
                 TotalOrders = totalOrders,
-                TotalRevenue = totalRevenue
+                TotalRevenue = totalRevenue,
+                CashRevenue = request.CashRevenue,
+                TransferRevenue = request.TransferRevenue,
+                InitialCash = request.InitialCash,
+                ActualCash = request.ActualCash,
+                CashDifference = request.CashDifference
             };
 
             var result = await _staffReportService.CreateAsync(createReportRequest);
@@ -313,6 +325,12 @@ namespace RapchieuPhim.API.Controllers
     public class SendReportRequest
     {
         public string Date { get; set; } = string.Empty;
+        public string? ShiftName { get; set; }
         public string? Notes { get; set; }
+        public decimal CashRevenue { get; set; } = 0;
+        public decimal TransferRevenue { get; set; } = 0;
+        public decimal InitialCash { get; set; } = 0;
+        public decimal ActualCash { get; set; } = 0;
+        public decimal CashDifference { get; set; } = 0;
     }
 }

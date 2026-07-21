@@ -27,22 +27,30 @@ namespace RapchieuPhim.API.Services
         public async Task<List<Staffreport>> GetAllAsync()
         {
             return await _context.Staffreports
-                .OrderByDescending(r => r.ReportDate)
+                .Include(r => r.Staff)
+                .Include(r => r.Cinema)
+                .OrderByDescending(r => r.GeneratedAt)
+                .ThenByDescending(r => r.ReportDate)
                 .ToListAsync();
         }
 
         // 🔓 2. XEM CHI TIẾT BÁO CÁO THEO ID
         public async Task<Staffreport?> GetByIdAsync(int id)
         {
-            return await _context.Staffreports.FindAsync(id);
+            return await _context.Staffreports
+                .Include(r => r.Staff)
+                .Include(r => r.Cinema)
+                .FirstOrDefaultAsync(r => r.ReportId == id);
         }
 
         // 🔓 3. LẤY DANH SÁCH BÁO CÁO THEO NHÂN VIÊN
         public async Task<List<Staffreport>> GetByStaffAsync(int staffId)
         {
             return await _context.Staffreports
+                .Include(r => r.Staff)
+                .Include(r => r.Cinema)
                 .Where(r => r.StaffId == staffId)
-                .OrderByDescending(r => r.ReportDate)
+                .OrderByDescending(r => r.GeneratedAt)
                 .ToListAsync();
         }
 
@@ -50,8 +58,10 @@ namespace RapchieuPhim.API.Services
         public async Task<List<Staffreport>> GetByCinemaAsync(int cinemaId)
         {
             return await _context.Staffreports
+                .Include(r => r.Staff)
+                .Include(r => r.Cinema)
                 .Where(r => r.CinemaId == cinemaId)
-                .OrderByDescending(r => r.ReportDate)
+                .OrderByDescending(r => r.GeneratedAt)
                 .ToListAsync();
         }
 
