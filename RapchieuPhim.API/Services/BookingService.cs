@@ -308,6 +308,11 @@ namespace RapchieuPhim.API.Services
                 var bookingDate = DateTime.Now; // 🌟 Thời gian đồng nhất cho cả nhóm ghế đặt cùng lúc
 
                 // 8a. Tính giá và tạo Booking cho từng ghế
+                int studentDiscountAppliedCount = 0;
+                int maxStudentDiscounts = request.StudentCount.HasValue && request.StudentCount.Value > 0
+                    ? Math.Min(request.StudentCount.Value, seats.Count)
+                    : (request.IsStudent ? seats.Count : 0);
+
                 foreach (var seat in seats)
                 {
                     // [NOTE]: Tìm bảng giá vé khớp với loại phòng chiếu, loại ghế, loại ngày thường/cuối tuần và đang trong thời gian hiệu lực
@@ -324,7 +329,10 @@ namespace RapchieuPhim.API.Services
                     if (pricing == null)
                         return (false, ValidationMessages.BookingMessages.PricingNotFound, null);
 
-                    decimal studentDiscount = request.IsStudent ? Math.Round(pricing.Price * 0.05m, 0) : 0;
+                    bool applyStudentDiscount = request.IsStudent && studentDiscountAppliedCount < maxStudentDiscounts;
+                    decimal studentDiscount = applyStudentDiscount ? Math.Round(pricing.Price * 0.05m, 0) : 0;
+                    if (applyStudentDiscount) studentDiscountAppliedCount++;
+
                     decimal finalPrice = pricing.Price - studentDiscount;
 
                     ticketTotal += finalPrice;

@@ -27,6 +27,7 @@ namespace RapchieuPhim.API.DTO.DTORequest
         public List<OrderItemRequest>? OrderItems { get; set; }
 
         public bool IsStudent { get; set; }
+        public int? StudentCount { get; set; }
     }
 
     // ─── Một dòng đồ ăn/combo trong đơn hàng ─────────────────────────────────────
