@@ -211,9 +211,14 @@ namespace RapchieuPhim.API.Controllers
                     var startOfMonth = new DateTime(now.Year, now.Month, 1);
                     query = query.Where(t => t.IssuedAt >= startOfMonth);
                 }
-                else if (DateTime.TryParse(filter, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime specificDate))
+                else
                 {
-                    query = query.Where(t => t.IssuedAt.Date == specificDate.Date);
+                    bool isParsed = DateTime.TryParseExact(filter, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime specificDate) ||
+                                    DateTime.TryParse(filter, out specificDate);
+                    if (isParsed)
+                    {
+                        query = query.Where(t => t.IssuedAt.Date == specificDate.Date);
+                    }
                 }
             }
             return query;
@@ -239,9 +244,14 @@ namespace RapchieuPhim.API.Controllers
                     var startOfMonth = new DateTime(now.Year, now.Month, 1);
                     query = query.Where(o => o.OrderDate >= startOfMonth);
                 }
-                else if (DateTime.TryParse(filter, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime specificDate))
+                else
                 {
-                    query = query.Where(o => o.OrderDate.Date == specificDate.Date);
+                    bool isParsed = DateTime.TryParseExact(filter, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime specificDate) ||
+                                    DateTime.TryParse(filter, out specificDate);
+                    if (isParsed)
+                    {
+                        query = query.Where(o => o.OrderDate.Date == specificDate.Date);
+                    }
                 }
             }
             return query;

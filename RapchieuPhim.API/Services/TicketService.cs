@@ -33,12 +33,15 @@ namespace RapchieuPhim.API.Services
         public async Task<List<TicketResponse>> GetAllAsync()
         {
             var list = await _context.Tickets
+                .AsNoTracking()
+                .AsSplitQuery()
                 .Include(t => t.Booking).ThenInclude(b => b.User)
                 .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Movie)
                 .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Room).ThenInclude(r => r.Cinema).ThenInclude(c => c.Area)
                 .Include(t => t.Booking).ThenInclude(b => b.Seat)
                 .Include(t => t.Booking).ThenInclude(b => b.Orders).ThenInclude(o => o.Orderitems).ThenInclude(oi => oi.Food)
                 .Include(t => t.Booking).ThenInclude(b => b.Orders).ThenInclude(o => o.Orderitems).ThenInclude(oi => oi.Combo)
+                .OrderByDescending(t => t.IssuedAt)
                 .ToListAsync();
             return list.Select(MapToResponse).ToList();
         }
@@ -46,6 +49,8 @@ namespace RapchieuPhim.API.Services
         public async Task<TicketResponse?> GetByIdAsync(int id)
         {
             var ticket = await _context.Tickets
+                .AsNoTracking()
+                .AsSplitQuery()
                 .Include(t => t.Booking).ThenInclude(b => b.User)
                 .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Movie)
                 .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Room).ThenInclude(r => r.Cinema).ThenInclude(c => c.Area)
@@ -61,6 +66,8 @@ namespace RapchieuPhim.API.Services
         {
             var cleanCode = ticketCode.Trim();
             var ticket = await _context.Tickets
+                .AsNoTracking()
+                .AsSplitQuery()
                 .Include(t => t.Booking).ThenInclude(b => b.User)
                 .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Movie)
                 .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Room).ThenInclude(r => r.Cinema).ThenInclude(c => c.Area)
@@ -75,6 +82,8 @@ namespace RapchieuPhim.API.Services
         public async Task<List<TicketResponse>> GetByBookingAsync(int bookingId)
         {
             var list = await _context.Tickets
+                .AsNoTracking()
+                .AsSplitQuery()
                 .Include(t => t.Booking).ThenInclude(b => b.User)
                 .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Movie)
                 .Include(t => t.Booking).ThenInclude(b => b.ShowTime).ThenInclude(s => s.Room).ThenInclude(r => r.Cinema).ThenInclude(c => c.Area)
