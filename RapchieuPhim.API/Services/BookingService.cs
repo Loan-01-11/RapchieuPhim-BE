@@ -330,7 +330,16 @@ namespace RapchieuPhim.API.Services
                         return (false, ValidationMessages.BookingMessages.PricingNotFound, null);
 
                     bool applyStudentDiscount = request.IsStudent && studentDiscountAppliedCount < maxStudentDiscounts;
-                    decimal studentDiscount = applyStudentDiscount ? Math.Round(pricing.Price * 0.05m, 0) : 0;
+                    bool isCoupleSeat = seat.SeatType != null && (
+                        seat.SeatType.Contains("Couple", StringComparison.OrdinalIgnoreCase) ||
+                        seat.SeatType.Contains("Sweetbox", StringComparison.OrdinalIgnoreCase) ||
+                        seat.SeatType.Contains("Đôi", StringComparison.OrdinalIgnoreCase) ||
+                        seat.SeatType.Contains("Doi", StringComparison.OrdinalIgnoreCase)
+                    );
+
+                    // Nếu là ghế đôi (Couple) và giá ghi nhận cho cả cặp (> 100k), chỉ tính 15% giảm trên 1 vé đơn (1/2 giá cặp)
+                    decimal seatUnitPrice = (isCoupleSeat && pricing.Price > 100000) ? (pricing.Price / 2m) : pricing.Price;
+                    decimal studentDiscount = applyStudentDiscount ? Math.Round(seatUnitPrice * 0.15m, 0) : 0;
                     if (applyStudentDiscount) studentDiscountAppliedCount++;
 
                     decimal finalPrice = pricing.Price - studentDiscount;
