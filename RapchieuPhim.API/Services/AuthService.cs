@@ -320,6 +320,8 @@ namespace RapchieuPhim.API.Services
         /// <summary>Xác thực Google ID token hoặc Access Token, trả null nếu lỗi.</summary>
         private async Task<GoogleJsonWebSignature.Payload?> VerifyGoogleToken(string idToken)
         {
+            if (string.IsNullOrWhiteSpace(idToken)) return null;
+
             // CỔNG PHỤ: Chỉ cho phép dùng token giả lập "mock-google-test" khi ở môi trường Development
             if (_env.IsDevelopment() && idToken == "mock-google-test")
             {
@@ -329,6 +331,12 @@ namespace RapchieuPhim.API.Services
                     Name  = "User Test Google",
                     Picture = "https://lh3.googleusercontent.com/a/default-user"
                 };
+            }
+
+            // Nếu token là Google Access Token (bắt đầu bằng "ya29") -> gọi trực tiếp UserInfo API
+            if (idToken.StartsWith("ya29"))
+            {
+                return await VerifyGoogleAccessToken(idToken);
             }
 
             try
@@ -354,37 +362,50 @@ namespace RapchieuPhim.API.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Google Auth Error]: {ex.Message}");
-                if (ex.InnerException != null)
-                    Console.WriteLine($"[Inner Exception]: {ex.InnerException.Message}");
-
-                // Fallback: Thử xác thực nếu token truyền vào là Access Token (ya29...) hoặc API userinfo Google
-                try
-                {
-                    using var client = new HttpClient();
-                    var req = new HttpRequestMessage(HttpMethod.Get, "https://www.googleapis.com/oauth2/v3/userinfo");
-                    req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", idToken);
-                    var res = await client.SendAsync(req);
-                    if (res.IsSuccessStatusCode)
-                    {
-                        var json = await res.Content.ReadAsStringAsync();
-                        using var doc = System.Text.Json.JsonDocument.Parse(json);
-                        var root = doc.RootElement;
-                        return new GoogleJsonWebSignature.Payload
-                        {
-                            Email = root.TryGetProperty("email", out var e) ? e.GetString()! : "",
-                            Name = root.TryGetProperty("name", out var n) ? n.GetString()! : "",
-                            Picture = root.TryGetProperty("picture", out var p) ? p.GetString()! : ""
-                        };
-                    }
-                }
-                catch (Exception fallbackEx)
-                {
-                    Console.WriteLine($"[Google Auth Fallback Error]: {fallbackEx.Message}");
-                }
-
-                return null;
+                Console.WriteLine($"[Google Auth ID Token Error]: {ex.Message}");
+                return await VerifyGoogleAccessToken(idToken);
             }
+        }
+
+        private async Task<GoogleJsonWebSignature.Payload?> VerifyGoogleAccessToken(string accessToken)
+        {
+            try
+            {
+                using var client = new HttpClient();
+                var req = new HttpRequestMessage(HttpMethod.Get, "https://www.googleapis.com/oauth2/v3/userinfo");
+                req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+                var res = await client.SendAsync(req);
+                if (res.IsSuccessStatusCode)
+                {
+                    var json = await res.Content.ReadAsStringAsync();
+                    using var doc = System.Text.Json.JsonDocument.Parse(json);
+                    var root = doc.RootElement;
+
+                    var email = root.TryGetProperty("email", out var e) ? e.GetString() : null;
+                    if (string.IsNullOrEmpty(email))
+                    {
+                        Console.WriteLine("[Google UserInfo Error]: Email claim is missing or empty.");
+                        return null;
+                    }
+
+                    return new GoogleJsonWebSignature.Payload
+                    {
+                        Email = email,
+                        Name = root.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "",
+                        Picture = root.TryGetProperty("picture", out var p) ? p.GetString() ?? "" : ""
+                    };
+                }
+                else
+                {
+                    Console.WriteLine($"[Google UserInfo Error Status]: {res.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Google Access Token Error]: {ex.Message}");
+            }
+
+            return null;
         }
 
         /// <summary>Tạo JWT token cho user.</summary>
