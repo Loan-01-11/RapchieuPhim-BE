@@ -47,6 +47,7 @@ namespace RapchieuPhim.API.Services
             TotalAmount   = o.TotalAmount,
             OrderType     = o.OrderType,
             Status        = o.Status,
+            CinemaId      = o.Booking?.ShowTime?.Room?.CinemaId ?? o.Staff?.CinemaId,
             Items         = o.Orderitems.Select(i => new OrderItemResponse
             {
                 OrderItemId = i.OrderItemId,
@@ -66,6 +67,9 @@ namespace RapchieuPhim.API.Services
                 .Include(o => o.User)
                 .Include(o => o.Staff)
                 .Include(o => o.Discount)
+                .Include(o => o.Booking)
+                    .ThenInclude(b => b.ShowTime)
+                        .ThenInclude(s => s.Room)
                 .Include(o => o.Orderitems)
                     .ThenInclude(i => i.Food)
                 .Include(o => o.Orderitems)

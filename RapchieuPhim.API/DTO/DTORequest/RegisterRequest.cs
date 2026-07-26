@@ -32,11 +32,7 @@ namespace RapchieuPhim.API.DTO.DTORequest
         [Required(ErrorMessage = ValidationMessages.PhoneRequired)]
         public string Phone { get; set; } = null!;
 
-        /// <summary>
-        /// RoleName dùng để đăng ký theo vai trò.
-        /// Cho phép: Admin, Staff, Customer.
-        /// Nếu không gửi thì mặc định là Customer.
-        /// </summary>
         public string? RoleName { get; set; } = RoleConstants.Customer;
+        public int? CinemaId { get; set; }
     }
 }

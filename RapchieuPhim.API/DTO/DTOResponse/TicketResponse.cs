@@ -4,6 +4,8 @@ namespace RapchieuPhim.API.DTOs.DTOResponse
     {
         public int TicketId { get; set; }
         public int BookingId { get; set; }
+        public int? ShowtimeId { get; set; }
+        public int? RoomId { get; set; }
         public string TicketCode { get; set; } = null!;
         public string? QrCodeUrl { get; set; }
         public decimal Price { get; set; }

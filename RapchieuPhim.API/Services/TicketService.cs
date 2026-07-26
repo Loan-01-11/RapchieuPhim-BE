@@ -273,6 +273,8 @@ namespace RapchieuPhim.API.Services
             {
                 TicketId = ticket.TicketId,
                 BookingId = ticket.BookingId,
+                ShowtimeId = booking?.ShowTimeId,
+                RoomId = showtime?.RoomId,
                 TicketCode = ticket.TicketCode,
                 QrCodeUrl = ticket.QrCodeUrl,
                 Price = ticket.Price,

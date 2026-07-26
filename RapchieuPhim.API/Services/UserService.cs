@@ -45,7 +45,8 @@ namespace RapchieuPhim.API.Services
                     Gender = u.Gender,
                     RewardPoint = u.RewardPoint,
                     MembershipLevel = u.MembershipLevel,
-                    TotalSpent = u.BookingUsers.Sum(b => (decimal?)b.TotalAmount) ?? 0m
+                    TotalSpent = u.BookingUsers.Sum(b => (decimal?)b.TotalAmount) ?? 0m,
+                    CinemaId = u.CinemaId
                 }).ToListAsync();
         }
 
@@ -60,8 +61,10 @@ namespace RapchieuPhim.API.Services
                     FullName = u.FullName,
                     Email = u.Email,
                     Phone = u.Phone,
+                    Address = u.Address,
                     Role = u.Role,
-                    IsActive = u.IsActive
+                    IsActive = u.IsActive,
+                    CinemaId = u.CinemaId
                 }).FirstOrDefaultAsync();
         }
 
@@ -78,8 +81,11 @@ namespace RapchieuPhim.API.Services
                     Phone = u.Phone,
                     DateOfBirth = u.DateOfBirth,
                     Gender = u.Gender,
+                    Address = u.Address,
                     Role = u.Role,
-                    CreatedAt = u.CreatedAt
+                    CreatedAt = u.CreatedAt,
+                    CinemaId = u.CinemaId,
+                    AvatarUrl = u.AvatarUrl
                 }).FirstOrDefaultAsync();
         }
 
@@ -90,13 +96,27 @@ namespace RapchieuPhim.API.Services
             if (user == null || !user.IsActive)
                 return (false, ValidationMessages.AccountNotFoundOrLocked, 404);
 
-            if (!DateOnly.TryParseExact(request.DateOfBirth, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dob))
-                return (false, ValidationMessages.DateOfBirthInvalidFormatSimple, 400);
+            if (!string.IsNullOrEmpty(request.DateOfBirth))
+            {
+                if (!DateOnly.TryParseExact(request.DateOfBirth, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dob))
+                    return (false, ValidationMessages.DateOfBirthInvalidFormatSimple, 400);
+                user.DateOfBirth = dob;
+            }
 
-            user.FullName = request.FullName.Trim();
-            user.Phone = request.Phone.Trim();
-            user.DateOfBirth = dob;
-            user.Gender = string.IsNullOrWhiteSpace(request.Gender) ? null : request.Gender.Trim();
+            if (request.FullName != null)
+                user.FullName = request.FullName.Trim();
+
+            if (request.Phone != null)
+                user.Phone = request.Phone.Trim();
+
+            if (request.Gender != null)
+                user.Gender = request.Gender.Trim();
+
+            if (request.Address != null)
+                user.Address = request.Address.Trim();
+
+            if (request.AvatarUrl != null)
+                user.AvatarUrl = request.AvatarUrl;
 
             await _context.SaveChangesAsync();
             return (true, ValidationMessages.UpdatedProfileSuccessfully, 200);
@@ -128,8 +148,10 @@ namespace RapchieuPhim.API.Services
             targetUser.Phone = request.Phone.Trim();
             targetUser.DateOfBirth = dob;
             targetUser.Gender = string.IsNullOrWhiteSpace(request.Gender) ? null : request.Gender.Trim();
+            targetUser.Address = string.IsNullOrWhiteSpace(request.Address) ? null : request.Address.Trim();
             targetUser.Role = newRole;
             targetUser.IsActive = request.IsActive;
+            targetUser.CinemaId = request.CinemaId;
 
             await _context.SaveChangesAsync();
             return (true, ValidationMessages.UserUpdateSuccessWithId(id), 200);
@@ -161,6 +183,7 @@ namespace RapchieuPhim.API.Services
                     FullName = u.FullName,
                     Email = u.Email,
                     Phone = u.Phone,
+                    Address = u.Address,
                     Role = u.Role,
                     IsActive = u.IsActive,
                     CreatedAt = u.CreatedAt,
@@ -168,7 +191,8 @@ namespace RapchieuPhim.API.Services
                     Gender = u.Gender,
                     RewardPoint = u.RewardPoint,
                     MembershipLevel = u.MembershipLevel,
-                    TotalSpent = u.BookingUsers.Sum(b => (decimal?)b.TotalAmount) ?? 0m
+                    TotalSpent = u.BookingUsers.Sum(b => (decimal?)b.TotalAmount) ?? 0m,
+                    CinemaId = u.CinemaId
                 }).ToListAsync();
         }
     }

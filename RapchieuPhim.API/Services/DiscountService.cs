@@ -160,10 +160,6 @@ namespace RapchieuPhim.API.Services
             if (discount == null)
                 return (false, DiscountMessages.NotFoundWithId(id), 404);
 
-            // 2. CHỐT CHẶN: Chỉ Super Admin mới được cập nhật
-            if (currentOperatorEmail != ValidationMessages.SuperAdminEmail)
-                return (false, DiscountMessages.UnauthorizedUpdate, 403);
-
             // 3. Kiểm tra loại giảm giá hợp lệ
             if (!DiscountMessages.ValidDiscountTypes.Contains(request.DiscountType))
                 return (false, DiscountMessages.InvalidDiscountType, 400);
@@ -218,10 +214,6 @@ namespace RapchieuPhim.API.Services
             var discount = await _context.Discounts.FindAsync(id);
             if (discount == null)
                 return (false, DiscountMessages.NotFoundWithId(id), 404);
-
-            // 2. CHỐT CHẶN: Chỉ Super Admin mới được xóa
-            if (currentOperatorEmail != ValidationMessages.SuperAdminEmail)
-                return (false, ValidationMessages.UnauthorizedDelete, 403);
 
             // 3. BẢO VỆ DỮ LIỆU: Không cho xóa mã đã được khách hàng sử dụng
             if (discount.UsedCount > 0)

@@ -176,6 +176,26 @@ namespace RapchieuPhim.API.Controllers
             orderQuery = FilterOrders(orderQuery, filter, cinemaId);
             var totalFoodRevenue = await orderQuery.Select(o => (decimal?)o.TotalAmount).SumAsync() ?? 0m;
             
+            var orderIds = await orderQuery.Select(o => o.OrderId).ToListAsync();
+
+            var foodDistList = await _context.Orderitems
+                .Include(oi => oi.Food)
+                .Include(oi => oi.Combo)
+                .Where(oi => orderIds.Contains(oi.OrderId))
+                .Select(oi => new {
+                    Name = oi.Food != null ? oi.Food.FoodName : (oi.Combo != null ? oi.Combo.ComboName : "Sản phẩm khác"),
+                    Value = oi.Subtotal,
+                    Quantity = oi.Quantity
+                })
+                .GroupBy(x => x.Name)
+                .Select(g => new {
+                    Name = g.Key,
+                    Value = g.Sum(x => x.Value),
+                    Quantity = g.Sum(x => x.Quantity)
+                })
+                .OrderByDescending(x => x.Value)
+                .ToListAsync();
+            
             var totalRev = totalTicketRevenue + totalFoodRevenue;
             var ticketPerc = totalRev > 0 ? (int)Math.Round((totalTicketRevenue / totalRev) * 100) : 0;
             var foodPerc = totalRev > 0 ? (int)Math.Round((totalFoodRevenue / totalRev) * 100) : 0;
@@ -185,7 +205,7 @@ namespace RapchieuPhim.API.Controllers
                 TotalFoodRevenue = totalFoodRevenue,
                 TicketRevenuePercentage = ticketPerc,
                 FoodRevenuePercentage = foodPerc,
-                FoodDistributions = new object[] { },
+                FoodDistributions = foodDistList,
                 TopShowtimes = new object[] { },
                 RevenueByTime = new object[] { }
             });
@@ -228,7 +248,10 @@ namespace RapchieuPhim.API.Controllers
         {
             if (!string.IsNullOrEmpty(cinemaId) && int.TryParse(cinemaId, out int cid))
             {
-                query = query.Where(o => o.Booking != null && o.Booking.ShowTime != null && o.Booking.ShowTime.Room != null && o.Booking.ShowTime.Room.CinemaId == cid);
+                query = query.Where(o => 
+                    (o.Booking != null && o.Booking.ShowTime != null && o.Booking.ShowTime.Room != null && o.Booking.ShowTime.Room.CinemaId == cid) ||
+                    (o.Booking == null && o.Staff != null && o.Staff.CinemaId == cid)
+                );
             }
 
             if (!string.IsNullOrEmpty(filter))

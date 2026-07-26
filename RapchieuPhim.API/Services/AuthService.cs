@@ -137,7 +137,8 @@ namespace RapchieuPhim.API.Services
                 Role         = roleName,
                 RewardPoint  = 0,
                 IsActive     = true,
-                CreatedAt    = DateTime.Now
+                CreatedAt    = DateTime.Now,
+                CinemaId     = request.CinemaId
             };
 
             _context.Users.Add(user);
@@ -450,10 +451,12 @@ namespace RapchieuPhim.API.Services
                     FullName        = user.FullName,
                     Email           = user.Email,
                     Phone           = user.Phone,
+                    Address         = user.Address,
                     AvatarUrl       = user.AvatarUrl,
                     MembershipLevel = user.MembershipLevel,
                     RewardPoint     = user.RewardPoint,
-                    Role            = user.Role
+                    Role            = user.Role,
+                    CinemaId        = user.CinemaId
                 }
             };
         }

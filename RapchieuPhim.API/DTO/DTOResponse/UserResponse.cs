@@ -11,8 +11,11 @@ namespace RapchieuPhim.API.DTO.DTOResponse
         public DateTime CreatedAt { get; set; }
         public DateOnly? DateOfBirth { get; set; }
         public string? Gender { get; set; }
+        public string? Address { get; set; }
         public int RewardPoint { get; set; }
         public string? MembershipLevel { get; set; }
         public decimal TotalSpent { get; set; }
+        public int? CinemaId { get; set; }
+        public string? AvatarUrl { get; set; }
     }
 }

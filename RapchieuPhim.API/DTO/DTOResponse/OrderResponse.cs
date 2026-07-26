@@ -10,6 +10,7 @@ namespace RapchieuPhim.API.DTO.DTOResponse
         public string? UserName   { get; set; }  // Tên khách hàng đặt đồ ăn
         public int? BookingId     { get; set; }  // Đơn vé liên kết (nếu có)
         public int? StaffId       { get; set; }  // Nhân viên xử lý (nếu có)
+        public int? CinemaId      { get; set; }  // Chi nhánh của đơn hàng
         public string? StaffName  { get; set; }  // Tên nhân viên
         public int? DiscountId    { get; set; }
         public string? DiscountCode { get; set; } // Mã giảm giá đã áp dụng

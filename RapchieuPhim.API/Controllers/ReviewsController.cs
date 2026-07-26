@@ -60,7 +60,7 @@ namespace RapchieuPhim.API.Controllers
         public async Task<IActionResult> Create([FromBody] Review review)
         {
             review.ReviewDate = DateTime.Now;
-            review.IsApproved = false; // requires admin approval
+            review.IsApproved = true; // Auto-approved for immediate accurate rating
             _context.Reviews.Add(review);
             await _context.SaveChangesAsync();
             return CreatedAtAction(nameof(GetById), new { id = review.ReviewId }, review);

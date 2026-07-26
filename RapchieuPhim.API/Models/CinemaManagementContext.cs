@@ -573,7 +573,7 @@ public partial class CinemaManagementContext : DbContext
             entity.HasIndex(e => e.Email, "UQ_USERS_EMAIL").IsUnique();
 
             entity.Property(e => e.Address).HasMaxLength(255);
-            entity.Property(e => e.AvatarUrl).HasMaxLength(500);
+            entity.Property(e => e.AvatarUrl).HasColumnType("nvarchar(max)");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
@@ -587,6 +587,12 @@ public partial class CinemaManagementContext : DbContext
             entity.Property(e => e.Role)
                 .HasMaxLength(50)
                 .HasDefaultValue("Customer");
+
+            entity.Property(e => e.CinemaId).HasColumnName("CinemaId");
+            entity.HasOne(d => d.Cinema).WithMany()
+                .HasForeignKey(d => d.CinemaId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_USERS_CINEMAS");
         });
 
         modelBuilder.Entity<Userdiscountusage>(entity =>

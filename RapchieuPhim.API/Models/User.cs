@@ -59,5 +59,9 @@ public partial class User
 
     public virtual ICollection<Ticketpricing> Ticketpricings { get; set; } = new List<Ticketpricing>();
 
+    public int? CinemaId { get; set; }
+
+    public virtual Cinema? Cinema { get; set; }
+
     public virtual ICollection<Userdiscountusage> Userdiscountusages { get; set; } = new List<Userdiscountusage>();
 }
