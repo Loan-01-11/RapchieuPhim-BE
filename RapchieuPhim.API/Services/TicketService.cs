@@ -133,8 +133,11 @@ namespace RapchieuPhim.API.Services
                 MovieTitle = created?.Booking?.ShowTime?.Movie?.Title ?? "N/A",
                 SeatCode = created?.Booking?.Seat != null ? (created.Booking.Seat.SeatRow + created.Booking.Seat.SeatNumber) : "N/A",
                 AreaName = created?.Booking?.ShowTime?.Room?.Cinema?.Area?.AreaName ?? "N/A",
+                CinemaId = created?.Booking?.ShowTime?.Room?.Cinema?.CinemaId,
                 CinemaName = created?.Booking?.ShowTime?.Room?.Cinema?.CinemaName ?? "N/A",
-                RoomName = created?.Booking?.ShowTime?.Room?.RoomName ?? "N/A"
+                RoomName = created?.Booking?.ShowTime?.Room?.RoomName ?? "N/A",
+                ShowtimeStart = created?.Booking?.ShowTime?.StartTime,
+                ShowtimeEnd = created?.Booking?.ShowTime?.EndTime
             };
         }
 
@@ -284,8 +287,11 @@ namespace RapchieuPhim.API.Services
                 MovieTitle = showtime?.Movie?.Title ?? "N/A",
                 SeatCode = booking?.Seat != null ? (booking.Seat.SeatRow + booking.Seat.SeatNumber) : "N/A",
                 AreaName = showtime?.Room?.Cinema?.Area?.AreaName ?? "N/A",
+                CinemaId = showtime?.Room?.Cinema?.CinemaId,
                 CinemaName = showtime?.Room?.Cinema?.CinemaName ?? "N/A",
-                RoomName = showtime?.Room?.RoomName ?? "N/A"
+                RoomName = showtime?.Room?.RoomName ?? "N/A",
+                ShowtimeStart = showtime?.StartTime,
+                ShowtimeEnd = showtime?.EndTime
             };
 
             if (booking?.Orders != null)

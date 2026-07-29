@@ -15,8 +15,11 @@ namespace RapchieuPhim.API.DTOs.DTOResponse
         public string? MovieTitle { get; set; }
         public string? SeatCode { get; set; }
         public string? AreaName { get; set; }
+        public int? CinemaId { get; set; }
         public string? CinemaName { get; set; }
         public string? RoomName { get; set; }
+        public DateTime? ShowtimeStart { get; set; }
+        public DateTime? ShowtimeEnd { get; set; }
 
         public List<BookingFoodDetailResponse> Foods { get; set; } = new();
     }
