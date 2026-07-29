@@ -8,7 +8,7 @@ namespace RapchieuPhim.API.Services
 {
     public interface IBookingService
     {
-        Task<List<BookingDetailResponse>> GetAllDetailsAsync();
+        Task<List<BookingDetailResponse>> GetAllDetailsAsync(string? date = null);
         Task<BookingDetailResponse?> GetDetailByIdAsync(int id);
         Task<(bool IsSuccess, string Message, List<BookingDetailResponse>? Data)> GetHistoryByUserAsync(int userId, int currentUserId, string currentRole);
         Task<List<AvailableSeatResponse>> GetAvailableSeatsAsync(int showTimeId);
@@ -27,9 +27,20 @@ namespace RapchieuPhim.API.Services
         }
 
         // 🌟 Tận dụng View VW_BOOKING_DETAIL để hốt toàn bộ lịch sử sạch sẽ
-        public async Task<List<BookingDetailResponse>> GetAllDetailsAsync()
+        public async Task<List<BookingDetailResponse>> GetAllDetailsAsync(string? date = null)
         {
-            return await _context.VwBookingDetails
+            var query = _context.VwBookingDetails.AsQueryable();
+
+            if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var parsedDate))
+            {
+                var start = parsedDate.Date;
+                var end = start.AddDays(1);
+                query = query.Where(b => b.BookingDate >= start && b.BookingDate < end);
+            }
+
+            return await query
+                .OrderByDescending(b => b.BookingDate)
+                .Take(500)
                 .Select(b => new BookingDetailResponse
                 {
                     BookingId = b.BookingId,

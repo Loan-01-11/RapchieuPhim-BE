@@ -24,9 +24,9 @@ namespace RapchieuPhim.API.Controllers
         // GET: api/Bookings 👑 (CHỈ ADMIN VÀ STAFF MỚI ĐƯỢC XEM TOÀN BỘ DANH SÁCH ĐƠN VÉ)
         [HttpGet]
         [Authorize(Roles = "Admin,Staff")]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] string? date)
         {
-            var bookings = await _bookingService.GetAllDetailsAsync();
+            var bookings = await _bookingService.GetAllDetailsAsync(date);
             return Ok(bookings);
         }
 

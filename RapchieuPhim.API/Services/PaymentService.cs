@@ -14,7 +14,7 @@ namespace RapchieuPhim.API.Services
     // ─────────────────────────────────────────────────────────────────────────────
     public interface IPaymentService
     {
-        Task<List<PaymentResponse>> GetAllAsync();
+        Task<List<PaymentResponse>> GetAllAsync(string? date = null);
         Task<PaymentResponse?> GetByIdAsync(int id);
         Task<List<PaymentResponse>> GetByUserAsync(int userId, int currentUserId, string currentRole);
         Task<List<PaymentResponse>> GetByBookingAsync(int bookingId);
@@ -76,10 +76,20 @@ namespace RapchieuPhim.API.Services
                                  : null
         };
 
-        public async Task<List<PaymentResponse>> GetAllAsync()
+        public async Task<List<PaymentResponse>> GetAllAsync(string? date = null)
         {
-            var list = await _context.Payments
+            var query = _context.Payments.AsNoTracking().AsQueryable();
+
+            if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var parsedDate))
+            {
+                var start = parsedDate.Date;
+                var end = start.AddDays(1);
+                query = query.Where(p => p.CreatedAt >= start && p.CreatedAt < end);
+            }
+
+            var list = await query
                 .OrderByDescending(p => p.CreatedAt)
+                .Take(500)
                 .ToListAsync();
             return list.Select(MapToResponse).ToList();
         }

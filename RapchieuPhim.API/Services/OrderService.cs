@@ -11,7 +11,7 @@ namespace RapchieuPhim.API.Services
     // ─────────────────────────────────────────────────────────────────────────────
     public interface IOrderService
     {
-        Task<List<OrderResponse>> GetAllAsync();
+        Task<List<OrderResponse>> GetAllAsync(string? date = null);
         Task<OrderResponse?> GetByIdAsync(int id);
         Task<List<OrderResponse>> GetByUserAsync(int userId, int currentUserId, string currentRole);
         Task<List<OrderResponse>> GetByBookingAsync(int bookingId);
@@ -78,10 +78,20 @@ namespace RapchieuPhim.API.Services
         // ─────────────────────────────────────────────────────────────────────────
         // LẤY TOÀN BỘ DANH SÁCH ĐƠN HÀNG (Chỉ Admin + Staff)
         // ─────────────────────────────────────────────────────────────────────────
-        public async Task<List<OrderResponse>> GetAllAsync()
+        public async Task<List<OrderResponse>> GetAllAsync(string? date = null)
         {
-            var orders = await QueryWithDetails()
+            var query = QueryWithDetails();
+
+            if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var parsedDate))
+            {
+                var start = parsedDate.Date;
+                var end = start.AddDays(1);
+                query = query.Where(o => o.OrderDate >= start && o.OrderDate < end);
+            }
+
+            var orders = await query
                 .OrderByDescending(o => o.OrderDate)
+                .Take(500)
                 .ToListAsync();
             return orders.Select(MapToResponse).ToList();
         }

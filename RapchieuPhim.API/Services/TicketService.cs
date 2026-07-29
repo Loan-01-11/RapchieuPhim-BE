@@ -11,7 +11,7 @@ namespace RapchieuPhim.API.Services
 {
     public interface ITicketService
     {
-        Task<List<TicketResponse>> GetAllAsync();
+        Task<List<TicketResponse>> GetAllAsync(string? date = null);
         Task<TicketResponse?> GetByIdAsync(int id);
         Task<TicketResponse?> GetByCodeAsync(string ticketCode);
         Task<List<TicketResponse>> GetByBookingAsync(int bookingId);
@@ -30,9 +30,9 @@ namespace RapchieuPhim.API.Services
             _context = context;
         }
 
-        public async Task<List<TicketResponse>> GetAllAsync()
+        public async Task<List<TicketResponse>> GetAllAsync(string? date = null)
         {
-            var list = await _context.Tickets
+            var query = _context.Tickets
                 .AsNoTracking()
                 .AsSplitQuery()
                 .Include(t => t.Booking).ThenInclude(b => b.User)
@@ -41,7 +41,18 @@ namespace RapchieuPhim.API.Services
                 .Include(t => t.Booking).ThenInclude(b => b.Seat)
                 .Include(t => t.Booking).ThenInclude(b => b.Orders).ThenInclude(o => o.Orderitems).ThenInclude(oi => oi.Food)
                 .Include(t => t.Booking).ThenInclude(b => b.Orders).ThenInclude(o => o.Orderitems).ThenInclude(oi => oi.Combo)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var parsedDate))
+            {
+                var start = parsedDate.Date;
+                var end = start.AddDays(1);
+                query = query.Where(t => t.IssuedAt >= start && t.IssuedAt < end);
+            }
+
+            var list = await query
                 .OrderByDescending(t => t.IssuedAt)
+                .Take(500)
                 .ToListAsync();
             return list.Select(MapToResponse).ToList();
         }

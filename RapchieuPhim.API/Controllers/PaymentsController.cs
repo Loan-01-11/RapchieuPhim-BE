@@ -22,9 +22,9 @@ namespace RapchieuPhim.API.Controllers
         // GET: api/Payments  👑 (Chỉ Admin + Staff xem toàn bộ lịch sử giao dịch)
         [HttpGet]
         [Authorize(Roles = "Admin,Staff")]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] string? date)
         {
-            var payments = await _paymentService.GetAllAsync();
+            var payments = await _paymentService.GetAllAsync(date);
             return Ok(payments);
         }
 
