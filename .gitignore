@@ -35,3 +35,4 @@ packages/
 ## Secrets – never commit connection strings or keys
 appsettings.Development.json
 appsettings.Development.json.example
+.codex-build/
