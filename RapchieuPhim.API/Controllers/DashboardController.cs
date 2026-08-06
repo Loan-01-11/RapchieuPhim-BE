@@ -248,7 +248,8 @@ namespace RapchieuPhim.API.Controllers
         {
             if (!string.IsNullOrEmpty(cinemaId) && int.TryParse(cinemaId, out int cid))
             {
-                query = query.Where(o => 
+                query = query.Where(o =>
+                    o.CinemaId == cid ||
                     (o.Booking != null && o.Booking.ShowTime != null && o.Booking.ShowTime.Room != null && o.Booking.ShowTime.Room.CinemaId == cid) ||
                     (o.Booking == null && o.Staff != null && o.Staff.CinemaId == cid)
                 );

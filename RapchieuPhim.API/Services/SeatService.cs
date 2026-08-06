@@ -17,6 +17,8 @@ namespace RapchieuPhim.API.Services
         Task<(bool IsSuccess, string Message, int StatusCode, object? Data)> UpdateAsync(int id, UpdateSeatRequest request);
         Task<(bool IsSuccess, string Message, int StatusCode, object? Data)> UpdateTypeBatchAsync(UpdateSeatTypeBatchRequest request);
         Task<(bool IsSuccess, string Message, int StatusCode, object? Data)> ToggleStatusBatchAsync(ToggleSeatStatusBatchRequest request);
+        Task<(bool IsSuccess, string Message, int StatusCode, object? Data)> CreateRangeAsync(CreateSeatRangeRequest request);
+        Task<(bool IsSuccess, string Message, int StatusCode, object? Data)> UpdateLayoutAsync(int roomId, UpdateSeatLayoutRequest request);
         Task<(bool IsSuccess, string Message, int StatusCode, object? Data)> DeleteAsync(int id);
     }
 
@@ -48,11 +50,10 @@ namespace RapchieuPhim.API.Services
         // 🔓 3. LẤY DANH SÁCH GHẾ THEO PHÒNG
         public async Task<List<Seat>> GetByRoomAsync(int roomId)
         {
-            return await _context.Seats
-                .Where(s => s.RoomId == roomId && s.IsActive)
-                .OrderBy(s => s.SeatRow)
-                .ThenBy(s => s.SeatNumber)
+            var seats = await _context.Seats.AsNoTracking()
+                .Where(s => s.RoomId == roomId)
                 .ToListAsync();
+            return seats.OrderBy(s => s.SeatRow).ThenBy(SeatOrdinal).ToList();
         }
 
         // 🔓 4. LẤY SƠ ĐỒ GHẾ THEO PHÒNG (nhóm theo hàng)
@@ -65,9 +66,8 @@ namespace RapchieuPhim.API.Services
 
             var seats = await _context.Seats
                 .Where(s => s.RoomId == roomId)
-                .OrderBy(s => s.SeatRow)
-                .ThenBy(s => s.SeatNumber)
                 .ToListAsync();
+            seats = seats.OrderBy(s => s.SeatRow).ThenBy(SeatOrdinal).ToList();
 
             // Nhóm ghế theo hàng để FE dễ vẽ sơ đồ
             var layout = seats
@@ -81,7 +81,8 @@ namespace RapchieuPhim.API.Services
                         s.SeatId,
                         s.SeatNumber,
                         s.SeatType,
-                        s.IsActive
+                        s.IsActive,
+                        s.CoupleGroupId
                     }).ToList()
                 }).ToList();
 
@@ -215,8 +216,14 @@ namespace RapchieuPhim.API.Services
             if (duplicate)
                 return (false, string.Format(SeatMessages.SeatAlreadyExists, request.SeatRow.ToUpper(), request.SeatNumber), 409, null);
 
-            seat.SeatRow    = request.SeatRow.ToUpper().Trim();
-            seat.SeatNumber = request.SeatNumber.Trim();
+            var hasBooking = await _context.Bookings.AnyAsync(b => b.SeatId == id);
+            var newRow = request.SeatRow.ToUpper().Trim();
+            var newNumber = NormalizeSeatCode(newRow, request.SeatNumber);
+            if (hasBooking && (seat.SeatRow != newRow || seat.SeatNumber != newNumber))
+                return (false, "Ghế đã có booking/vé nên không được đổi mã; chỉ có thể chuyển Inactive.", 409, null);
+
+            seat.SeatRow    = newRow;
+            seat.SeatNumber = newNumber;
             seat.SeatType   = request.SeatType.Trim();
             seat.IsActive   = request.IsActive;
 
@@ -271,13 +278,150 @@ namespace RapchieuPhim.API.Services
             if (seat == null)
                 return (false, ValidationMessages.SeatNotFoundWithId(id), 404, null);
 
-            var room = await _context.Rooms.FindAsync(seat.RoomId);
-            if (room != null && room.TotalSeats > 0) room.TotalSeats -= 1;
+            if (await _context.Bookings.AnyAsync(b => b.SeatId == id))
+            {
+                seat.IsActive = false;
+                await _context.SaveChangesAsync();
+                return (true, "Ghế đã có booking/vé nên được chuyển sang Inactive thay vì xóa.", 200, seat);
+            }
 
+            var room = await _context.Rooms.FindAsync(seat.RoomId);
             _context.Seats.Remove(seat);
+            await _context.SaveChangesAsync();
+            if (room != null) room.TotalSeats = await _context.Seats.CountAsync(s => s.RoomId == seat.RoomId);
             await _context.SaveChangesAsync();
 
             return (true, SeatMessages.DeleteSeatSuccess, 200, null);
+        }
+
+        public async Task<(bool IsSuccess, string Message, int StatusCode, object? Data)> CreateRangeAsync(CreateSeatRangeRequest request)
+        {
+            var row = request.SeatRow.Trim().ToUpperInvariant();
+            var type = NormalizeSeatType(request.SeatType);
+            if (request.FromSeat > request.ToSeat)
+                return (false, "Từ số phải nhỏ hơn hoặc bằng Đến số.", 400, null);
+            if (type == null) return (false, SeatMessages.InvalidSeatType(request.SeatType), 400, null);
+
+            var room = await _context.Rooms.SingleOrDefaultAsync(r => r.RoomId == request.RoomId);
+            if (room == null) return (false, SeatMessages.RoomNotFound, 404, null);
+            var count = request.ToSeat - request.FromSeat + 1;
+            if (type == "Couple" && (count % 2 != 0 || request.FromSeat % 2 == 0 || request.ToSeat % 2 != 0))
+                return (false, "Ghế Couple phải tạo theo cặp liên tiếp: bắt đầu số lẻ, kết thúc số chẵn.", 400, null);
+
+            var currentCount = await _context.Seats.CountAsync(s => s.RoomId == request.RoomId);
+            if (room.TotalSeats > 0 && currentCount + count > room.TotalSeats)
+                return (false, $"Số ghế mới vượt sức chứa phòng ({room.TotalSeats}).", 409, null);
+
+            var codes = Enumerable.Range(request.FromSeat, count).Select(n => $"{row}{n}").ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var existingInRow = await _context.Seats.AsNoTracking()
+                .Where(s => s.RoomId == request.RoomId && s.SeatRow == row)
+                .Select(s => s.SeatNumber).ToListAsync();
+            var duplicates = existingInRow
+                .Select(number => NormalizeSeatCode(row, number))
+                .Where(codes.Contains).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            if (duplicates.Count > 0)
+                return (false, $"Mã ghế đã tồn tại: {string.Join(", ", duplicates)}.", 409, null);
+
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var seats = new List<Seat>();
+                Guid? coupleGroup = null;
+                for (var number = request.FromSeat; number <= request.ToSeat; number++)
+                {
+                    if (type == "Couple" && (number - request.FromSeat) % 2 == 0) coupleGroup = Guid.NewGuid();
+                    seats.Add(new Seat
+                    {
+                        RoomId = request.RoomId, SeatRow = row, SeatNumber = $"{row}{number}",
+                        SeatType = type, IsActive = request.IsActive,
+                        CoupleGroupId = type == "Couple" ? coupleGroup : null
+                    });
+                }
+                _context.Seats.AddRange(seats);
+                await _context.SaveChangesAsync();
+                room.TotalSeats = await _context.Seats.CountAsync(s => s.RoomId == request.RoomId);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return (true, $"Đã thêm {seats.Count} ghế.", 201, seats);
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        public async Task<(bool IsSuccess, string Message, int StatusCode, object? Data)> UpdateLayoutAsync(int roomId, UpdateSeatLayoutRequest request)
+        {
+            var room = await _context.Rooms.FindAsync(roomId);
+            if (room == null) return (false, SeatMessages.RoomNotFound, 404, null);
+            if (request.Changes.Select(c => c.SeatId).Distinct().Count() != request.Changes.Count)
+                return (false, "Danh sách thay đổi có ghế bị trùng.", 400, null);
+
+            var seats = await _context.Seats.Where(s => s.RoomId == roomId).ToListAsync();
+            var seatMap = seats.ToDictionary(s => s.SeatId);
+            foreach (var change in request.Changes)
+            {
+                if (!seatMap.TryGetValue(change.SeatId, out var seat))
+                    return (false, $"Ghế {change.SeatId} không thuộc phòng.", 404, null);
+                var type = NormalizeSeatType(change.SeatType);
+                if (type == null) return (false, SeatMessages.InvalidSeatType(change.SeatType), 400, null);
+                seat.SeatType = type;
+                seat.IsActive = change.IsActive;
+            }
+
+            foreach (var seat in seats.Where(s => s.SeatType != "Couple")) seat.CoupleGroupId = null;
+            foreach (var rowGroup in seats.Where(s => s.SeatType == "Couple").GroupBy(s => s.SeatRow))
+            {
+                var couples = rowGroup.OrderBy(SeatOrdinal).ToList();
+                if (couples.Count % 2 != 0)
+                    return (false, $"Hàng {rowGroup.Key} có số ghế Couple lẻ.", 400, null);
+                for (var i = 0; i < couples.Count; i += 2)
+                {
+                    var first = SeatOrdinal(couples[i]);
+                    var second = SeatOrdinal(couples[i + 1]);
+                    if (first % 2 == 0 || second != first + 1)
+                        return (false, $"Ghế Couple hàng {rowGroup.Key} phải ghép theo cặp số lẻ-chẵn liên tiếp.", 400, null);
+                    var groupId = couples[i].CoupleGroupId ?? couples[i + 1].CoupleGroupId ?? Guid.NewGuid();
+                    couples[i].CoupleGroupId = groupId;
+                    couples[i + 1].CoupleGroupId = groupId;
+                }
+            }
+
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                room.TotalSeats = seats.Count;
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return (true, "Lưu sơ đồ ghế thành công.", 200, new { Updated = request.Changes.Count });
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        private static int SeatOrdinal(Seat seat)
+        {
+            var digits = new string((seat.SeatNumber ?? "").Where(char.IsDigit).ToArray());
+            return int.TryParse(digits, out var value) ? value : int.MaxValue;
+        }
+
+        private static string NormalizeSeatCode(string row, string seatNumber)
+        {
+            var digits = new string((seatNumber ?? "").Where(char.IsDigit).ToArray());
+            return $"{row}{digits}";
+        }
+
+        private static string? NormalizeSeatType(string? value)
+        {
+            if (string.Equals(value?.Trim(), "Standard", StringComparison.OrdinalIgnoreCase)) return "Standard";
+            if (string.Equals(value?.Trim(), "VIP", StringComparison.OrdinalIgnoreCase)) return "VIP";
+            if (string.Equals(value?.Trim(), "Couple", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(value?.Trim(), "Sweetbox", StringComparison.OrdinalIgnoreCase)) return "Couple";
+            return null;
         }
     }
 }

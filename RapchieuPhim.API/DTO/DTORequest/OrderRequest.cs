@@ -12,6 +12,8 @@ namespace RapchieuPhim.API.DTO.DTORequest
         // nếu mua tách riêng tại quầy thì có thể để trống
         public int? BookingId { get; set; }
 
+        public int? CinemaId { get; set; }
+
         // Mã giảm giá cho đơn đồ ăn (tuỳ chọn)
         public int? DiscountId { get; set; }
 
@@ -35,6 +37,13 @@ namespace RapchieuPhim.API.DTO.DTORequest
 
         [Range(1, 100, ErrorMessage = OrderMessages.QuantityInvalid)]
         public int Quantity { get; set; }
+        public List<OrderComboSelectionRequest>? SelectedComponents { get; set; }
+    }
+
+    public class OrderComboSelectionRequest
+    {
+        [Range(1, int.MaxValue)] public int FoodId { get; set; }
+        [Range(1, 100)] public int Quantity { get; set; }
     }
 
     // ─────────────────────────────────────────────────────────────────────────────

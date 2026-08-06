@@ -10,6 +10,9 @@ namespace RapchieuPhim.API.DTOs.DTOResponse
         public string? ImageUrl { get; set; }
         public int Quantity { get; set; }
         public bool IsAvailable { get; set; }
+        public bool AllowsCustomization { get; set; }
+        public int DrinkSlotCount { get; set; }
+        public int PopcornSlotCount { get; set; }
         
         public int SoldThisMonth { get; set; }
         public decimal RevenueThisMonth { get; set; }
@@ -30,5 +33,6 @@ namespace RapchieuPhim.API.DTOs.DTOResponse
         public string? Category { get; set; }
         public decimal UnitPrice { get; set; }
         public int Quantity { get; set; }        // Số lượng món này trong combo
+        public string ItemType { get; set; } = null!;
     }
 }

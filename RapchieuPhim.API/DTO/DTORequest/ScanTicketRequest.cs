@@ -14,5 +14,8 @@ namespace RapchieuPhim.API.DTOs.DTORequest
         /// </summary>
         [Required(ErrorMessage = ValidationMessages.TicketCodeRequired)]
         public string TicketCode { get; set; } = null!;
+
+        /// <summary>Suất chiếu tại cửa đang soát; bỏ trống nếu thiết bị không gửi được.</summary>
+        public int? ShowtimeId { get; set; }
     }
 }

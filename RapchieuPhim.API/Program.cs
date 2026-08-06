@@ -122,9 +122,12 @@ builder.Services.AddScoped<IBookingService, BookingService>();
 
 //Discount Service
 builder.Services.AddScoped<IDiscountService, DiscountService>();
+builder.Services.AddScoped<IChatbotService, ChatbotService>();
 builder.Services.AddScoped<IFoodService, FoodService>();
+builder.Services.AddScoped<IFoodInventoryService, FoodInventoryService>();
 builder.Services.AddScoped<IComboService, ComboService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IStudentCardVerificationService, StudentCardVerificationService>();
 
 // Order Service
 builder.Services.AddScoped<IOrderService, OrderService>();
@@ -140,6 +143,20 @@ builder.Services.AddScoped<IStaffShiftService, StaffShiftService>();
 
 
 var app = builder.Build();
+
+app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
+{
+    var error = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
+    context.Response.StatusCode = error switch
+    {
+        KeyNotFoundException or FileNotFoundException => StatusCodes.Status404NotFound,
+        UnauthorizedAccessException => StatusCodes.Status403Forbidden,
+        ArgumentException => StatusCodes.Status400BadRequest,
+        InvalidOperationException => StatusCodes.Status409Conflict,
+        _ => StatusCodes.Status500InternalServerError
+    };
+    await context.Response.WriteAsJsonAsync(new { message = context.Response.StatusCode == 500 ? "Đã xảy ra lỗi máy chủ." : error?.Message });
+}));
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -168,6 +185,7 @@ using (var scope = app.Services.CreateScope()) // 1. Mở một không gian cô 
     {
         // 2. Gọi tầng kết nối Database (DbContext) ra để dùng
         var context = services.GetRequiredService<RapchieuPhim.API.Models.CinemaManagementContext>();
+        await OrderComboSelectionSchema.EnsureAndBackfillAsync(context);
 
         // 3. Quét database xem có ông nào đang giữ quyền "Admin" chưa
         var hasAdmin = await context.Users.AnyAsync(u => u.Role == "Admin");

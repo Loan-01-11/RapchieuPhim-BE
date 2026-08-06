@@ -6,6 +6,7 @@ using RapchieuPhim.API.Constants;
 using RapchieuPhim.API.DTOs.DTORequest;
 using RapchieuPhim.API.DTOs.DTOResponse;
 using RapchieuPhim.API.Models;
+using RapchieuPhim.API.Utilities;
 
 namespace RapchieuPhim.API.Services
 {
@@ -32,19 +33,57 @@ namespace RapchieuPhim.API.Services
     {
         private readonly CinemaManagementContext _context;
         private readonly IConfiguration _configuration;
+        private readonly IFoodInventoryService _inventory;
 
-        public PaymentService(CinemaManagementContext context, IConfiguration configuration)
+        public PaymentService(CinemaManagementContext context, IConfiguration configuration, IFoodInventoryService inventory)
         {
             _context = context;
             _configuration = configuration;
+            _inventory = inventory;
         }
 
         /// <summary>
         /// Hàm phụ trợ: Chuyển đổi từ Model Entity sang Response DTO.
         /// Tự động sinh link ảnh QR VietQR và thông tin tài khoản ngân hàng.
         /// </summary>
-        private static PaymentResponse MapToResponse(Payment p) => new()
+        private static PaymentResponse MapToResponse(Payment p)
         {
+            var foodItems = (p.Order?.Orderitems ?? new List<Orderitem>()).Select(item =>
+            {
+                var currentName = item.Food?.FoodName ?? item.Combo?.ComboName ?? "Đồ ăn kèm";
+                var snapshot = RapchieuPhim.API.DTO.DTOResponse.OrderItemSnapshotHelper.Parse(item.ComboSelectionSnapshot, currentName);
+                var storedSelections = item.ComboSelections.Select(selection => new RapchieuPhim.API.DTO.DTOResponse.OrderComboComponentResponse
+                {
+                    FoodId = selection.FoodId,
+                    FoodName = selection.FoodNameSnapshot,
+                    Category = selection.CategorySnapshot,
+                    Quantity = selection.Quantity
+                }).ToList();
+                var selections = storedSelections.Count > 0 ? storedSelections : snapshot.ComboSelections;
+                return new RapchieuPhim.API.DTO.DTOResponse.OrderItemResponse
+                {
+                    OrderItemId = item.OrderItemId,
+                    FoodOrderDetailId = item.OrderItemId,
+                    FoodId = item.FoodId,
+                    ComboId = item.ComboId,
+                    ItemType = item.ComboId.HasValue ? "COMBO" : "FOOD",
+                    ItemNameSnapshot = snapshot.ItemNameSnapshot,
+                    FoodName = item.FoodId.HasValue ? snapshot.ItemNameSnapshot : null,
+                    ComboName = item.ComboId.HasValue ? snapshot.ItemNameSnapshot : null,
+                    Quantity = item.Quantity,
+                    UnitPrice = item.UnitPrice,
+                    UnitPriceSnapshot = item.UnitPrice,
+                    Subtotal = item.Subtotal,
+                    LineTotal = item.Subtotal,
+                    ComboComponents = selections,
+                    ComboSelections = selections,
+                    ComboSelectionDataUnavailable = item.ComboId.HasValue && selections.Count == 0
+                };
+            }).ToList();
+
+            var foodTotal = foodItems.Sum(item => item.LineTotal);
+            return new PaymentResponse
+            {
             PaymentId = p.PaymentId,
             BookingId = p.BookingId,
             OrderId = p.OrderId,
@@ -73,12 +112,23 @@ namespace RapchieuPhim.API.Services
             // BookingId ở đây là booking đại diện đầu tiên của cả nhóm ghế
             PaymentDescription = (p.PaymentMethod == PaymentMessages.MethodQrCode) && p.BookingId.HasValue
                                  ? $"THANH TOAN VE CP DAT VE {p.BookingId.Value}"
-                                 : null
-        };
+                                 : null,
+            InvoiceCode = p.Booking?.Tickets.FirstOrDefault()?.TicketCode ?? $"BILL{p.PaymentId:D6}",
+            TicketTotal = Math.Max(0, p.SubTotal - foodTotal),
+            FoodTotal = foodTotal,
+            FoodItems = foodItems
+            };
+        }
+
+        private IQueryable<Payment> QueryWithInvoiceDetails() => _context.Payments
+            .Include(payment => payment.Booking).ThenInclude(booking => booking.Tickets)
+            .Include(payment => payment.Order).ThenInclude(order => order!.Orderitems).ThenInclude(item => item.Food)
+            .Include(payment => payment.Order).ThenInclude(order => order!.Orderitems).ThenInclude(item => item.Combo)
+            .Include(payment => payment.Order).ThenInclude(order => order!.Orderitems).ThenInclude(item => item.ComboSelections);
 
         public async Task<List<PaymentResponse>> GetAllAsync(string? date = null)
         {
-            var query = _context.Payments.AsNoTracking().AsQueryable();
+            var query = QueryWithInvoiceDetails().AsNoTracking();
 
             if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var parsedDate))
             {
@@ -96,7 +146,7 @@ namespace RapchieuPhim.API.Services
 
         public async Task<PaymentResponse?> GetByIdAsync(int id)
         {
-            var p = await _context.Payments.FindAsync(id);
+            var p = await QueryWithInvoiceDetails().AsNoTracking().FirstOrDefaultAsync(payment => payment.PaymentId == id);
             return p == null ? null : MapToResponse(p);
         }
 
@@ -105,7 +155,7 @@ namespace RapchieuPhim.API.Services
             if (currentRole == RoleConstants.Customer && userId != currentUserId)
                 return new List<PaymentResponse>();
 
-            var list = await _context.Payments
+            var list = await QueryWithInvoiceDetails().AsNoTracking()
                 .Where(p => p.UserId == userId)
                 .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
@@ -114,7 +164,7 @@ namespace RapchieuPhim.API.Services
 
         public async Task<List<PaymentResponse>> GetByBookingAsync(int bookingId)
         {
-            var list = await _context.Payments
+            var list = await QueryWithInvoiceDetails().AsNoTracking()
                 .Where(p => p.BookingId == bookingId)
                 .ToListAsync();
             return list.Select(MapToResponse).ToList();
@@ -131,6 +181,10 @@ namespace RapchieuPhim.API.Services
         public async Task<(bool IsSuccess, string Message, int StatusCode, PaymentResponse? Data)> CreateAsync(
             PaymentRequest request, int currentUserId, string currentRole)
         {
+            var currentShift = SellingShiftClock.GetCurrentShift();
+            if (currentShift == null)
+                return (false, SellingShiftClock.ClosedMessage, 403, null);
+
             // Bước 1: Kiểm tra Booking tồn tại
             var booking = await _context.Bookings.FindAsync(request.BookingId);
             if (booking == null)
@@ -156,20 +210,64 @@ namespace RapchieuPhim.API.Services
                 .Where(b => b.UserId == booking.UserId
                          && b.ShowTimeId == booking.ShowTimeId
                          && b.BookingDate == booking.BookingDate)
+                .Include(b => b.ShowTime).ThenInclude(s => s.Room)
+                .Include(b => b.Seat)
+                .Include(b => b.Tickets)
                 .ToListAsync();
+
+            // Booking chưa thanh toán được chốt lại đơn giá từ SQL.
+            foreach (var batchBooking in batchBookings)
+            {
+                var showDate = DateOnly.FromDateTime(batchBooking.ShowTime.StartTime);
+                var dayType = batchBooking.ShowTime.StartTime.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday
+                    ? "Weekend" : "Weekday";
+                var currentPrice = await _context.Ticketpricings.AsNoTracking()
+                    .Where(p => p.IsActive
+                        && (p.RoomId == batchBooking.ShowTime.RoomId || p.RoomId == null)
+                        && (p.RoomType == null || p.RoomType == batchBooking.ShowTime.Room.RoomType)
+                        && (p.SeatType == null || p.SeatType == batchBooking.Seat.SeatType)
+                        && (p.DayType == null || p.DayType == dayType)
+                        && p.EffectFrom <= showDate
+                        && (p.EffectTo == null || p.EffectTo >= showDate))
+                    .OrderByDescending(p => p.RoomId == batchBooking.ShowTime.RoomId)
+                    .ThenByDescending(p => p.EffectFrom)
+                    .Select(p => (decimal?)p.Price)
+                    .FirstOrDefaultAsync();
+
+                if (!currentPrice.HasValue || currentPrice <= 0)
+                    return (false, $"Không tìm thấy bảng giá cho ghế {batchBooking.Seat.SeatRow}{batchBooking.Seat.SeatNumber}.", 409, null);
+
+                var isCouple = string.Equals(batchBooking.Seat.SeatType, "Couple", StringComparison.OrdinalIgnoreCase);
+                var unitPrice = isCouple ? currentPrice.Value / 2m : currentPrice.Value;
+                batchBooking.TicketPrice = unitPrice;
+                batchBooking.TotalAmount = Math.Max(0, unitPrice - batchBooking.DiscountAmt);
+                foreach (var ticket in batchBooking.Tickets.Where(t => t.Status != PaymentMessages.StatusSuccess))
+                    ticket.Price = batchBooking.TotalAmount;
+            }
 
             // Bước 4: Cộng dồn tiền của toàn bộ ghế trong nhóm
             decimal subTotal = batchBookings.Sum(b => b.TicketPrice);
             decimal discountAmt = batchBookings.Sum(b => b.DiscountAmt);
             decimal total = batchBookings.Sum(b => b.TotalAmount);
 
+            var resolvedOrderId = request.OrderId;
+            if (!resolvedOrderId.HasValue)
+            {
+                var bookingIdsForOrder = batchBookings.Select(b => b.BookingId).ToList();
+                resolvedOrderId = await _context.Orders.AsNoTracking()
+                    .Where(o => o.BookingId.HasValue && bookingIdsForOrder.Contains(o.BookingId.Value))
+                    .OrderByDescending(o => o.OrderId)
+                    .Select(o => (int?)o.OrderId)
+                    .FirstOrDefaultAsync();
+            }
+
             // Bước 5: Cộng thêm tiền đồ ăn nếu có
             //Kiểm tra xem khách hàng có gửi kèm mã hóa đơn đồ ăn (OrderId) lên cùng đợt thanh toán này hay không. Nếu có, hệ thống mới nhảy vào xử lý khối lệnh bên trong.
-            if (request.OrderId.HasValue)
+            if (resolvedOrderId.HasValue)
             {
-                var order = await _context.Orders.FindAsync(request.OrderId.Value);
+                var order = await _context.Orders.FindAsync(resolvedOrderId.Value);
                 if (order == null)
-                    return (false, PaymentMessages.OrderNotFoundForPayment(request.OrderId.Value), 404, null);
+                    return (false, PaymentMessages.OrderNotFoundForPayment(resolvedOrderId.Value), 404, null);
 
                 var batchBookingIds = batchBookings.Select(b => b.BookingId).ToList();
                 if (!order.BookingId.HasValue || !batchBookingIds.Contains(order.BookingId.Value))
@@ -194,9 +292,10 @@ namespace RapchieuPhim.API.Services
             var payment = new Payment
             {
                 BookingId = request.BookingId,   // Booking đại diện (ghế đầu tiên)
-                OrderId = request.OrderId,
+                OrderId = resolvedOrderId,
                 UserId = booking.UserId,
                 StaffId = staffId,
+                ShiftId = currentShift.ShiftId,
                 PaymentMethod = request.PaymentMethod.Trim(),
                 SubTotal = subTotal,            // Tổng tiền của TẤT CẢ ghế (+ đồ ăn)
                 DiscountAmt = discountAmt,
@@ -210,10 +309,28 @@ namespace RapchieuPhim.API.Services
                                 : request.Notes?.Trim()
             };
 
+            await using var paymentTransaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
             _context.Payments.Add(payment);
-            await _context.SaveChangesAsync();
 
-            return (true, PaymentMessages.CreateSuccess, 201, MapToResponse(payment));
+            if (initialStatus == PaymentMessages.StatusSuccess)
+            {
+                if (resolvedOrderId.HasValue)
+                {
+                    await _inventory.DeductOrderAsync(resolvedOrderId.Value, staffId);
+                    var paidOrder = await _context.Orders.FindAsync(resolvedOrderId.Value);
+                    if (paidOrder != null) paidOrder.Status = OrderMessages.StatusConfirmed;
+                }
+                var batchIds = batchBookings.Select(b => b.BookingId).ToList();
+                await ActivateTicketsForBookingsAsync(batchIds);
+                await RecordStudentDiscountUsageAsync(batchIds);
+            }
+
+            await _context.SaveChangesAsync();
+            await paymentTransaction.CommitAsync();
+
+            var savedPayment = await QueryWithInvoiceDetails().AsNoTracking()
+                .FirstAsync(item => item.PaymentId == payment.PaymentId);
+            return (true, PaymentMessages.CreateSuccess, 201, MapToResponse(savedPayment));
         }
 
         /// <summary>
@@ -237,14 +354,154 @@ namespace RapchieuPhim.API.Services
             if (!validStatuses.Contains(request.Status))
                 return (false, PaymentMessages.InvalidStatus, 400);
 
+            await using var statusTransaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
             payment.PaymentStatus = request.Status;
             payment.Notes = request.Notes?.Trim() ?? payment.Notes;
 
             if (request.Status == PaymentMessages.StatusSuccess)
+            {
                 payment.PaidAt = DateTime.Now;
+                if (payment.OrderId.HasValue)
+                {
+                    await _inventory.DeductOrderAsync(payment.OrderId.Value, payment.StaffId);
+                    var paidOrder = await _context.Orders.FindAsync(payment.OrderId.Value);
+                    if (paidOrder != null) paidOrder.Status = OrderMessages.StatusConfirmed;
+                }
+                if (payment.BookingId.HasValue)
+                {
+                    var batchIds = await GetBatchBookingIdsAsync(payment.BookingId.Value);
+                    await ActivateTicketsForBookingsAsync(batchIds);
+                    await RecordStudentDiscountUsageAsync(batchIds);
+                }
+            }
 
             await _context.SaveChangesAsync();
+            await statusTransaction.CommitAsync();
             return (true, PaymentMessages.UpdateStatusSuccess, 200);
+        }
+
+        private async Task ActivateTicketsForBookingsAsync(List<int> bookingIds)
+        {
+            if (bookingIds == null || !bookingIds.Any()) return;
+
+            try
+            {
+                var tickets = await _context.Tickets
+                    .Where(t => bookingIds.Contains(t.BookingId))
+                    .Include(t => t.Booking)
+                        .ThenInclude(b => b.ShowTime)
+                            .ThenInclude(s => s.Movie)
+                    .Include(t => t.Booking)
+                        .ThenInclude(b => b.Seat)
+                    .Include(t => t.Booking)
+                        .ThenInclude(b => b.Orders)
+                            .ThenInclude(o => o.Orderitems)
+                                .ThenInclude(oi => oi.Food)
+                    .Include(t => t.Booking)
+                        .ThenInclude(b => b.Orders)
+                            .ThenInclude(o => o.Orderitems)
+                                .ThenInclude(oi => oi.Combo)
+                    .ToListAsync();
+
+                foreach (var ticket in tickets)
+                {
+                    ticket.Status = ValidationMessages.TicketStatusActive;
+
+                    var booking = ticket.Booking;
+                    var showtime = booking?.ShowTime;
+                    var movie = showtime?.Movie;
+                    var seat = booking?.Seat;
+
+                    string movieTitle = movie?.Title ?? "Phim";
+                    string seatInfo = seat != null ? $"{seat.SeatRow}{seat.SeatNumber}" : "N/A";
+                    string showtimeInfo = showtime != null ? showtime.StartTime.ToString("dd/MM/yyyy HH:mm") : "N/A";
+                    string priceInfo = booking != null ? $"{booking.TotalAmount:N0} VND" : "N/A";
+
+                    var allOrderItems = new List<Orderitem>();
+                    if (booking?.Orders != null)
+                    {
+                        foreach (var order in booking.Orders)
+                        {
+                            if (order.Orderitems != null)
+                            {
+                                allOrderItems.AddRange(order.Orderitems);
+                            }
+                        }
+                    }
+
+                    var foodParts = allOrderItems.Where(oi => oi.Food != null).Select(oi => $"{oi.Food!.FoodName}x{oi.Quantity}").ToList();
+                    var comboParts = allOrderItems.Where(oi => oi.Combo != null).Select(FormatComboItem).ToList();
+                    var allFoodComboParts = foodParts.Concat(comboParts).ToList();
+                    string foodInfo = allFoodComboParts.Count > 0 ? string.Join(",", allFoodComboParts) : string.Empty;
+
+                    string qrData = $"VE:{ticket.TicketCode}|PHIM:{movieTitle}|SUAT:{showtimeInfo}|GHE:{seatInfo}|GIA:{priceInfo}|TRANG_THAI:{ticket.Status}";
+                    if (!string.IsNullOrEmpty(foodInfo))
+                        qrData += $"|DO_AN:{foodInfo}";
+
+                    string encodedQrData = Uri.EscapeDataString(qrData);
+                    ticket.QrCodeUrl = $"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={encodedQrData}";
+                }
+
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ActivateTicketsForBookingsAsync Error]: {ex.Message}");
+            }
+        }
+
+        private static string FormatComboItem(Orderitem item)
+        {
+            var title = $"{item.Combo?.ComboName}x{item.Quantity}";
+            if (string.IsNullOrWhiteSpace(item.ComboSelectionSnapshot)) return title;
+            try
+            {
+                var parts = RapchieuPhim.API.DTO.DTOResponse.OrderItemSnapshotHelper.Parse(item.ComboSelectionSnapshot).ComboSelections;
+                return parts?.Count > 0 ? $"{title} ({string.Join(", ", parts.Select(x => $"{x.FoodName}x{x.Quantity}"))})" : title;
+            }
+            catch { return title; }
+        }
+
+        private async Task<List<int>> GetBatchBookingIdsAsync(int bookingId)
+        {
+            var root = await _context.Bookings.AsNoTracking().FirstOrDefaultAsync(b => b.BookingId == bookingId);
+            if (root == null) return new List<int> { bookingId };
+
+            return await _context.Bookings.AsNoTracking()
+                .Where(b => b.UserId == root.UserId
+                    && b.ShowTimeId == root.ShowTimeId
+                    && b.BookingDate == root.BookingDate)
+                .Select(b => b.BookingId)
+                .ToListAsync();
+        }
+
+        private async Task RecordStudentDiscountUsageAsync(List<int> bookingIds)
+        {
+            if (bookingIds.Count == 0) return;
+
+            var verifications = await _context.StudentCardVerifications
+                .Where(v => bookingIds.Contains(v.BookingId)
+                    && v.Status == "APPROVED"
+                    && v.DiscountAmount > 0
+                    && v.Usage == null)
+                .ToListAsync();
+
+            foreach (var verification in verifications)
+            {
+                _context.StudentDiscountUsages.Add(new StudentDiscountUsage
+                {
+                    VerificationId = verification.Id,
+                    BookingId = verification.BookingId,
+                    StudentCode = verification.StudentCode,
+                    DiscountPercent = verification.DiscountPercent,
+                    DiscountAmount = verification.DiscountAmount,
+                    UsedAt = DateTime.UtcNow,
+                    Status = "APPLIED"
+                });
+            }
+
+            if (verifications.Count > 0)
+                await _context.SaveChangesAsync();
         }
 
         // ─────────────────────────────────────────────────────────────────────────
@@ -301,6 +558,7 @@ namespace RapchieuPhim.API.Services
                     return (false, $"Số tiền chuyển khoản ({request.AmountIn:N0}) < số tiền đơn hàng ({order.TotalAmount:N0})");
                 }
 
+                await _inventory.DeductOrderAsync(orderId, order.StaffId);
                 order.Status = "Confirmed";
 
                 // Lưu bản ghi Payment cho đơn hàng đồ ăn (OrderId) để quản lý doanh thu
@@ -451,7 +709,7 @@ namespace RapchieuPhim.API.Services
 
                 var comboParts = allOrderItems
                     .Where(oi => oi.Combo != null)
-                    .Select(oi => $"{oi.Combo!.ComboName}x{oi.Quantity}")
+                    .Select(FormatComboItem)
                     .ToList();
 
                 var allFoodComboParts = foodParts.Concat(comboParts).ToList();
@@ -470,6 +728,7 @@ namespace RapchieuPhim.API.Services
             }
 
             await _context.SaveChangesAsync();
+            await RecordStudentDiscountUsageAsync(allBatchBookingIds);
 
             Console.WriteLine($"[Sepay Webhook THÀNH CÔNG] Đã đối soát thành công và kích hoạt {tickets.Count} vé cho {allBatchBookingIds.Count} ghế!");
             return (true, $"Đối soát Sepay thành công. " +

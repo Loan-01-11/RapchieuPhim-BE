@@ -50,6 +50,22 @@ namespace RapchieuPhim.API.Controllers
             return Ok(pricing);
         }
 
+        [HttpGet("Room/{roomId:int}")]
+        public async Task<IActionResult> GetByRoom(int roomId)
+            => Ok(await _pricingService.GetByRoomAsync(roomId));
+
+        [HttpPut("Room/{roomId:int}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdateRoomPrices(int roomId, [FromBody] RoomTicketPricingBulkRequest request)
+        {
+            var idValue = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+            if (!int.TryParse(idValue, out var operatorId)) return Unauthorized();
+            var result = await _pricingService.UpdateRoomPricesAsync(roomId, request, operatorId);
+            return result.IsSuccess
+                ? Ok(new { message = result.Message, data = result.Data })
+                : StatusCode(result.StatusCode, new { message = result.Message });
+        }
+
         // POST: api/TicketPricing 👑 (CHỈ ADMIN MỚI ĐƯỢC TẠO QUY TẮC GIÁ MỚI)
         [HttpPost]
         [Authorize(Roles = "Admin")]

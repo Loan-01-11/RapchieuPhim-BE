@@ -17,6 +17,8 @@ public partial class Seat
 
     public bool IsActive { get; set; }
 
+    public Guid? CoupleGroupId { get; set; }
+
     public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 
     public virtual Room Room { get; set; } = null!;

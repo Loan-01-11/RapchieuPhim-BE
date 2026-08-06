@@ -18,6 +18,9 @@ public partial class Combo
     public int Quantity { get; set; }
 
     public bool IsAvailable { get; set; }
+    public bool AllowsCustomization { get; set; }
+    public int DrinkSlotCount { get; set; }
+    public int PopcornSlotCount { get; set; }
 
     public virtual ICollection<Combofoodmapping> Combofoodmappings { get; set; } = new List<Combofoodmapping>();
 

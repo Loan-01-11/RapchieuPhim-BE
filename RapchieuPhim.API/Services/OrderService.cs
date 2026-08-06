@@ -26,10 +26,25 @@ namespace RapchieuPhim.API.Services
     public class OrderService : IOrderService
     {
         private readonly CinemaManagementContext _context;
+        private readonly IFoodInventoryService _inventory;
 
-        public OrderService(CinemaManagementContext context)
+        public OrderService(CinemaManagementContext context, IFoodInventoryService inventory)
         {
             _context = context;
+            _inventory = inventory;
+        }
+
+        private static List<OrderComboComponentResponse> ParseComboComponents(string? json)
+        {
+            return OrderItemSnapshotHelper.Parse(json).ComboSelections;
+        }
+
+        private static string ComponentGroup(string? category)
+        {
+            var value = (category ?? "").ToLowerInvariant();
+            if (value.Contains("nước")) return "DRINK";
+            if (value.Contains("bắp")) return "POPCORN";
+            return "OTHER";
         }
 
         // ── Helper: Ánh xạ Order Entity → OrderResponse DTO ──────────────────────
@@ -45,19 +60,55 @@ namespace RapchieuPhim.API.Services
             DiscountCode  = o.Discount?.DiscountCode,
             OrderDate     = o.OrderDate,
             TotalAmount   = o.TotalAmount,
-            OrderType     = o.OrderType,
-            Status        = o.Status,
-            CinemaId      = o.Booking?.ShowTime?.Room?.CinemaId ?? o.Staff?.CinemaId,
-            Items         = o.Orderitems.Select(i => new OrderItemResponse
+            OrderType     = o.OrderType ?? "Staff",
+            Status        = o.Status ?? "Pending",
+            CinemaId      = o.CinemaId ?? o.Booking?.ShowTime?.Room?.CinemaId ?? o.Staff?.CinemaId,
+            Items         = (o.Orderitems ?? new List<Orderitem>()).Select(i =>
             {
+                var currentName = i.Food?.FoodName ?? i.Combo?.ComboName ?? "Đồ ăn kèm";
+                var snapshot = OrderItemSnapshotHelper.Parse(i.ComboSelectionSnapshot, currentName);
+                var storedSelections = i.ComboSelections.Select(selection => new OrderComboComponentResponse
+                {
+                    FoodId = selection.FoodId,
+                    FoodName = selection.FoodNameSnapshot,
+                    Category = selection.CategorySnapshot,
+                    Quantity = selection.Quantity
+                }).ToList();
+                var selections = storedSelections.Count > 0 ? storedSelections : snapshot.ComboSelections;
+                var comboItems = selections.Select(selection =>
+                {
+                    // Old selection rows do not contain a price; preserve the price
+                    // captured in the order snapshot instead of using today's catalog.
+                    var snapshotSelection = snapshot.ComboSelections.FirstOrDefault(x => x.FoodId == selection.FoodId);
+                    return new OrderComboItemResponse
+                    {
+                        ItemName = selection.FoodName,
+                        Quantity = selection.Quantity,
+                        UnitPrice = selection.UnitPriceSnapshot != 0
+                            ? selection.UnitPriceSnapshot
+                            : snapshotSelection?.UnitPriceSnapshot ?? 0
+                    };
+                }).ToList();
+                return new OrderItemResponse
+                {
                 OrderItemId = i.OrderItemId,
+                FoodOrderDetailId = i.OrderItemId,
                 FoodId      = i.FoodId,
                 FoodName    = i.Food?.FoodName,
                 ComboId     = i.ComboId,
                 ComboName   = i.Combo?.ComboName,
                 Quantity    = i.Quantity,
                 UnitPrice   = i.UnitPrice,
-                Subtotal    = i.Subtotal
+                Subtotal    = i.Subtotal,
+                ItemType = i.ComboId.HasValue ? "COMBO" : "FOOD",
+                ItemNameSnapshot = snapshot.ItemNameSnapshot,
+                UnitPriceSnapshot = i.UnitPrice,
+                LineTotal = i.Subtotal,
+                ComboItems = comboItems,
+                ComboComponents = selections,
+                ComboSelections = selections,
+                ComboSelectionDataUnavailable = i.ComboId.HasValue && selections.Count == 0
+                };
             }).ToList()
         };
 
@@ -73,7 +124,9 @@ namespace RapchieuPhim.API.Services
                 .Include(o => o.Orderitems)
                     .ThenInclude(i => i.Food)
                 .Include(o => o.Orderitems)
-                    .ThenInclude(i => i.Combo);
+                    .ThenInclude(i => i.Combo)
+                .Include(o => o.Orderitems)
+                    .ThenInclude(i => i.ComboSelections);
 
         // ─────────────────────────────────────────────────────────────────────────
         // LẤY TOÀN BỘ DANH SÁCH ĐƠN HÀNG (Chỉ Admin + Staff)
@@ -160,6 +213,54 @@ namespace RapchieuPhim.API.Services
             if (currentRole == RoleConstants.Admin || currentRole == RoleConstants.Staff)
                 staffId = currentUserId;
 
+            var cinemaId = request.CinemaId;
+            if (request.BookingId.HasValue)
+                cinemaId = await _context.Bookings.Where(x => x.BookingId == request.BookingId.Value)
+                    .Select(x => (int?)x.ShowTime.Room.CinemaId).SingleOrDefaultAsync();
+            if (!cinemaId.HasValue && staffId.HasValue)
+                cinemaId = await _context.Users.Where(x => x.UserId == staffId.Value).Select(x => x.CinemaId).SingleOrDefaultAsync();
+            if (!cinemaId.HasValue)
+                return (false, "Phải xác định rạp bán hàng.", 400, null);
+            if (currentRole == RoleConstants.Staff)
+            {
+                var staffCinemaId = await _context.Users.Where(x => x.UserId == currentUserId).Select(x => x.CinemaId).SingleOrDefaultAsync();
+                if (staffCinemaId != cinemaId) return (false, "Nhân viên chỉ được bán hàng tại rạp của mình.", 403, null);
+            }
+            var inventoryChecks = new List<(int? FoodId, int? ComboId, int Quantity)>();
+            foreach (var requestItem in request.Items)
+            {
+                if (!requestItem.ComboId.HasValue)
+                {
+                    inventoryChecks.Add((requestItem.FoodId, requestItem.ComboId, requestItem.Quantity));
+                    continue;
+                }
+
+                var comboConfig = await _context.Combos.AsNoTracking().Include(x => x.Combofoodmappings).ThenInclude(x => x.Food)
+                    .SingleOrDefaultAsync(x => x.ComboId == requestItem.ComboId.Value);
+                var comboSaleStatus = await _context.CinemaComboSettings.Where(x => x.CinemaId == cinemaId.Value && x.ComboId == requestItem.ComboId.Value).Select(x => x.SaleStatus).SingleOrDefaultAsync();
+                comboSaleStatus ??= comboConfig?.IsAvailable == true ? "ACTIVE" : "INACTIVE";
+                if (comboConfig == null)
+                    return (false, "Combo không tồn tại.", 400, null);
+                if (comboSaleStatus != "ACTIVE")
+                    return (false, "Combo hiện đã ngừng bán, vui lòng tải lại danh sách.", 400, null);
+                if (requestItem.SelectedComponents == null || requestItem.SelectedComponents.Count == 0)
+                    return (false, "Vui lòng chọn đủ thành phần cho Combo.", 400, null);
+                var configured = comboConfig.Combofoodmappings.ToList();
+                var selectedIds = requestItem.SelectedComponents.Select(x => x.FoodId).ToList();
+                var selectedFoods = await _context.Foods.AsNoTracking().Where(x => selectedIds.Contains(x.FoodId)).ToDictionaryAsync(x => x.FoodId);
+                if (configured.Count == 0 || selectedFoods.Count != selectedIds.Distinct().Count())
+                    return (false, "Thành phần Combo lựa chọn không hợp lệ.", 400, null);
+                var selectedGroups = requestItem.SelectedComponents.GroupBy(x => ComponentGroup(selectedFoods[x.FoodId].Category)).ToDictionary(g => g.Key, g => g.Sum(x => x.Quantity));
+                var allowedIds = configured.Select(x => x.FoodId).ToHashSet();
+                if (selectedIds.Any(x => !allowedIds.Contains(x)) ||
+                    selectedGroups.GetValueOrDefault("DRINK") != comboConfig.DrinkSlotCount * requestItem.Quantity ||
+                    selectedGroups.GetValueOrDefault("POPCORN") != comboConfig.PopcornSlotCount * requestItem.Quantity ||
+                    selectedGroups.Keys.Any(x => x != "DRINK" && x != "POPCORN"))
+                    return (false, "Số lượng nước hoặc bắp lựa chọn không đúng cấu hình Combo.", 400, null);
+                inventoryChecks.AddRange(requestItem.SelectedComponents.Select(x => ((int?)x.FoodId, (int?)null, x.Quantity)));
+            }
+            await _inventory.ValidateOrderAsync(cinemaId.Value, inventoryChecks);
+
             // Bước 3: Tính tiền từng dòng món bằng cách tra đơn giá thực tế trong DB
             var orderItems = new List<Orderitem>();
             decimal totalAmount = 0;
@@ -182,24 +283,55 @@ namespace RapchieuPhim.API.Services
                         ComboId   = null,
                         Quantity  = itemReq.Quantity,
                         UnitPrice = unitPrice,
-                        Subtotal  = unitPrice * itemReq.Quantity
+                        Subtotal  = unitPrice * itemReq.Quantity,
+                        ComboSelectionSnapshot = OrderItemSnapshotHelper.Serialize(food.FoodName)
                     });
                 }
                 else // ComboId.HasValue
                 {
                     // Lấy đơn giá Combo từ DB
-                    var combo = await _context.Combos.FindAsync(itemReq.ComboId!.Value);
+                    var combo = await _context.Combos.Include(x => x.Combofoodmappings).ThenInclude(x => x.Food)
+                        .SingleOrDefaultAsync(x => x.ComboId == itemReq.ComboId!.Value);
                     if (combo == null)
                         return (false, OrderMessages.ComboNotFoundWithId(itemReq.ComboId.Value), 404, null);
 
                     unitPrice = combo.Price;
+                    List<OrderComboComponentResponse> snapshotComponents;
+                    if (itemReq.SelectedComponents?.Count > 0)
+                    {
+                        var selectedIds = itemReq.SelectedComponents.Select(x => x.FoodId).ToList();
+                        var selectedFoods = await _context.Foods.AsNoTracking().Where(x => selectedIds.Contains(x.FoodId)).ToDictionaryAsync(x => x.FoodId);
+                        snapshotComponents = itemReq.SelectedComponents.Select(x => new OrderComboComponentResponse
+                        {
+                            FoodId = x.FoodId, FoodName = selectedFoods[x.FoodId].FoodName, Category = selectedFoods[x.FoodId].Category,
+                            Quantity = x.Quantity,
+                            UnitPriceSnapshot = selectedFoods[x.FoodId].Price
+                        }).ToList();
+                    }
+                    else
+                    {
+                        snapshotComponents = combo.Combofoodmappings.Select(x => new OrderComboComponentResponse
+                        {
+                            FoodId = x.FoodId, FoodName = x.Food.FoodName, Category = x.Food.Category, Quantity = x.Quantity * itemReq.Quantity
+                        }).ToList();
+                    }
                     orderItems.Add(new Orderitem
                     {
                         FoodId    = null,
                         ComboId   = combo.ComboId,
                         Quantity  = itemReq.Quantity,
                         UnitPrice = unitPrice,
-                        Subtotal  = unitPrice * itemReq.Quantity
+                        Subtotal  = unitPrice * itemReq.Quantity,
+                        ComboSelectionSnapshot = OrderItemSnapshotHelper.Serialize(combo.ComboName, snapshotComponents),
+                        ComboSelections = snapshotComponents.Select(selection => new OrderComboSelection
+                        {
+                            ComboId = combo.ComboId,
+                            FoodId = selection.FoodId,
+                            FoodNameSnapshot = selection.FoodName,
+                            CategorySnapshot = selection.Category,
+                            Quantity = selection.Quantity,
+                            CreatedAt = DateTime.Now
+                        }).ToList()
                     });
                 }
 
@@ -228,9 +360,10 @@ namespace RapchieuPhim.API.Services
                 BookingId   = request.BookingId,
                 StaffId     = staffId,
                 DiscountId  = request.DiscountId,
+                CinemaId    = cinemaId,
                 OrderDate   = DateTime.Now,
                 TotalAmount = totalAmount,
-                OrderType   = request.OrderType.Trim(),
+                OrderType   = (request.OrderType ?? "Staff").Trim(),
                 Status      = OrderMessages.StatusPending,
                 Orderitems  = orderItems
             };
@@ -260,8 +393,14 @@ namespace RapchieuPhim.API.Services
             if (!validStatuses.Contains(request.Status))
                 return (false, OrderMessages.InvalidStatus, 400);
 
+            await using var transaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            if (request.Status == OrderMessages.StatusConfirmed && order.Status != OrderMessages.StatusConfirmed)
+                await _inventory.DeductOrderAsync(order.OrderId);
+            if (request.Status == OrderMessages.StatusCancelled && order.Status == OrderMessages.StatusConfirmed)
+                await _inventory.ReturnOrderAsync(order.OrderId);
             order.Status = request.Status;
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
             return (true, OrderMessages.UpdateSuccess, 200);
         }
 
@@ -280,11 +419,13 @@ namespace RapchieuPhim.API.Services
                 return (false, OrderMessages.UnauthorizedCancel, 403);
 
             // Chặn hủy đơn đã được xác nhận
+            await using var transaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
             if (order.Status == OrderMessages.StatusConfirmed)
-                return (false, OrderMessages.CannotCancelConfirmed, 409);
+                await _inventory.ReturnOrderAsync(order.OrderId, currentUserId);
 
             order.Status = OrderMessages.StatusCancelled;
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
             return (true, OrderMessages.CancelSuccess, 200);
         }
     }

@@ -21,6 +21,7 @@ namespace RapchieuPhim.API.DTOs.DTOResponse
 
         // ── TỔNG TIỀN PHẢI THANH TOÁN ─────────────────────────────────────────────
         public decimal GrandTotal           { get; set; }   // = TicketAfterDiscount + FoodTotal
+        public decimal FinalAmount          { get; set; }   // Nguồn tiền cuối cùng Backend đã tính để thanh toán
     }
 
     /// <summary>

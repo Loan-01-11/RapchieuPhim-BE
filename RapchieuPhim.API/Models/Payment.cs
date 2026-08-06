@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace RapchieuPhim.API.Models;
@@ -15,7 +15,11 @@ public partial class Payment
 
     public int? StaffId { get; set; }
 
+    public int? ShiftId { get; set; }
+
     public string PaymentMethod { get; set; } = null!;
+
+    public string? PaymentType { get; set; }
 
     public decimal SubTotal { get; set; }
 

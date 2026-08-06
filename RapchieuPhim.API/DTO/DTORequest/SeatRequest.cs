@@ -81,4 +81,34 @@ namespace RapchieuPhim.API.DTO.DTORequest
 
         public bool IsActive { get; set; }
     }
+
+    public class CreateSeatRangeRequest
+    {
+        [Required]
+        public int RoomId { get; set; }
+        [Required, MaxLength(5)]
+        public string SeatRow { get; set; } = null!;
+        [Range(1, 999)]
+        public int FromSeat { get; set; }
+        [Range(1, 999)]
+        public int ToSeat { get; set; }
+        [Required]
+        public string SeatType { get; set; } = null!;
+        public bool IsActive { get; set; } = true;
+    }
+
+    public class SeatLayoutChangeRequest
+    {
+        [Required]
+        public int SeatId { get; set; }
+        [Required]
+        public string SeatType { get; set; } = null!;
+        public bool IsActive { get; set; }
+    }
+
+    public class UpdateSeatLayoutRequest
+    {
+        [Required, MinLength(1)]
+        public List<SeatLayoutChangeRequest> Changes { get; set; } = new();
+    }
 }

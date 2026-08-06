@@ -39,5 +39,6 @@ namespace RapchieuPhim.API.DTO.DTORequest
 
         [Range(1, 50, ErrorMessage = ValidationMessages.BookingMessages.OrderItemQuantityInvalid)]
         public int Quantity { get; set; } = 1;
+        public List<OrderComboSelectionRequest>? SelectedComponents { get; set; }
     }
 }

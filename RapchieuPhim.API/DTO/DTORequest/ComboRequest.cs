@@ -22,6 +22,9 @@ namespace RapchieuPhim.API.DTOs.DTORequest
         public int Quantity { get; set; }
 
         public bool IsAvailable { get; set; } = true;
+        public bool AllowsCustomization { get; set; }
+        [Range(0, 20)] public int DrinkSlotCount { get; set; }
+        [Range(0, 20)] public int PopcornSlotCount { get; set; }
 
         // Danh sách các món ăn trong combo (có thể null khi chỉ cập nhật thông tin combo)
         public List<ComboFoodItemRequest>? FoodItems { get; set; }
@@ -33,7 +36,7 @@ namespace RapchieuPhim.API.DTOs.DTORequest
         [Required(ErrorMessage = ComboMessages.FoodIdRequired)]
         public int FoodId { get; set; }
 
-        [Range(1, 100, ErrorMessage = ComboMessages.FoodQuantityInvalid)]
-        public int Quantity { get; set; } = 1;
+        // Giữ để tương thích request cũ; số lượng thực tế lấy từ slot của Combo.
+        public int Quantity { get; set; }
     }
 }

@@ -144,6 +144,7 @@ namespace RapchieuPhim.API.Services
                 char currentRowChar = 'A';
                 int currentSeatInRow = 1;
                 int currentRowIndex = 1;
+                Guid? currentCoupleGroupId = null;
 
                 for (int i = 0; i < totalSeats; i++)
                 {
@@ -155,6 +156,7 @@ namespace RapchieuPhim.API.Services
                     else if (currentRowIndex > standardRows + vipRows)
                     {
                         seatType = "Couple";
+                        if (currentSeatInRow % 2 == 1) currentCoupleGroupId = Guid.NewGuid();
                     }
 
                     string seatNumber = $"{currentRowChar}{currentSeatInRow}";
@@ -164,6 +166,7 @@ namespace RapchieuPhim.API.Services
                         SeatRow = currentRowChar.ToString(),
                         SeatNumber = seatNumber,
                         SeatType = seatType,
+                        CoupleGroupId = seatType == "Couple" ? currentCoupleGroupId : null,
                         IsActive = true
                     });
 

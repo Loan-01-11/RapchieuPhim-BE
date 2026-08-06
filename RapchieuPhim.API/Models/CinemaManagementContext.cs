@@ -29,6 +29,13 @@ public partial class CinemaManagementContext : DbContext
 
     public virtual DbSet<Food> Foods { get; set; }
 
+    public virtual DbSet<CinemaFoodInventory> CinemaFoodInventories { get; set; }
+    public virtual DbSet<CinemaComboSetting> CinemaComboSettings { get; set; }
+
+    public virtual DbSet<FoodInventoryTransaction> FoodInventoryTransactions { get; set; }
+
+    public virtual DbSet<FoodStockReceipt> FoodStockReceipts { get; set; }
+
     public virtual DbSet<Movie> Movies { get; set; }
 
     public virtual DbSet<Moviecategory> Moviecategories { get; set; }
@@ -36,6 +43,8 @@ public partial class CinemaManagementContext : DbContext
     public virtual DbSet<Order> Orders { get; set; }
 
     public virtual DbSet<Orderitem> Orderitems { get; set; }
+
+    public virtual DbSet<OrderComboSelection> OrderComboSelections { get; set; }
 
     public virtual DbSet<Payment> Payments { get; set; }
 
@@ -55,11 +64,19 @@ public partial class CinemaManagementContext : DbContext
 
     public virtual DbSet<Ticket> Tickets { get; set; }
 
+    public virtual DbSet<TicketExchange> TicketExchanges { get; set; }
+
     public virtual DbSet<Ticketpricing> Ticketpricings { get; set; }
+
+    public virtual DbSet<TicketPricingHistory> TicketPricingHistories { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
 
     public virtual DbSet<Userdiscountusage> Userdiscountusages { get; set; }
+
+    public virtual DbSet<StudentCardVerification> StudentCardVerifications { get; set; }
+
+    public virtual DbSet<StudentDiscountUsage> StudentDiscountUsages { get; set; }
 
     public virtual DbSet<VwAvailableSeat> VwAvailableSeats { get; set; }
 
@@ -169,6 +186,9 @@ public partial class CinemaManagementContext : DbContext
             entity.Property(e => e.ComboName).HasMaxLength(150);
             entity.Property(e => e.ImageUrl).HasMaxLength(500);
             entity.Property(e => e.IsAvailable).HasDefaultValue(true);
+            entity.Property(e => e.AllowsCustomization).HasDefaultValue(false);
+            entity.Property(e => e.DrinkSlotCount).HasDefaultValue(0);
+            entity.Property(e => e.PopcornSlotCount).HasDefaultValue(0);
             entity.Property(e => e.Price).HasColumnType("decimal(12, 2)");
         });
 
@@ -327,6 +347,7 @@ public partial class CinemaManagementContext : DbContext
             entity.Property(e => e.Quantity).HasDefaultValue(1);
             entity.Property(e => e.Subtotal).HasColumnType("decimal(12, 2)");
             entity.Property(e => e.UnitPrice).HasColumnType("decimal(12, 2)");
+            entity.Property(e => e.ComboSelectionSnapshot).HasColumnType("nvarchar(max)");
 
             entity.HasOne(d => d.Combo).WithMany(p => p.Orderitems)
                 .HasForeignKey(d => d.ComboId)
@@ -437,6 +458,9 @@ public partial class CinemaManagementContext : DbContext
                 .HasMaxLength(2)
                 .IsFixedLength();
             entity.Property(e => e.SeatType).HasMaxLength(30);
+            entity.Property(e => e.CoupleGroupId).HasColumnType("uniqueidentifier");
+            entity.HasIndex(e => e.CoupleGroupId, "IX_SEATS_COUPLE_GROUP");
+            entity.HasIndex(e => new { e.RoomId, e.SeatRow, e.SeatNumber }, "UX_SEATS_ROOM_CODE").IsUnique();
 
             entity.HasOne(d => d.Room).WithMany(p => p.Seats)
                 .HasForeignKey(d => d.RoomId)
@@ -557,11 +581,88 @@ public partial class CinemaManagementContext : DbContext
             entity.Property(e => e.Price).HasColumnType("decimal(12, 2)");
             entity.Property(e => e.RoomType).HasMaxLength(50);
             entity.Property(e => e.SeatType).HasMaxLength(30);
+            entity.HasIndex(e => new { e.RoomId, e.SeatType, e.DayType }, "UX_TICKETPRICING_ROOM_SEAT_DAY_ACTIVE")
+                .IsUnique()
+                .HasFilter("[RoomId] IS NOT NULL AND [IsActive] = 1");
+
+            entity.HasOne(d => d.Room).WithMany()
+                .HasForeignKey(d => d.RoomId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_TP_ROOM");
 
             entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.Ticketpricings)
                 .HasForeignKey(d => d.CreatedBy)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_TP_USER");
+        });
+
+        modelBuilder.Entity<OrderComboSelection>(entity =>
+        {
+            entity.ToTable("ORDERCOMBOSELECTIONS");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.OrderDetailId);
+            entity.Property(e => e.FoodNameSnapshot).HasMaxLength(255);
+            entity.Property(e => e.CategorySnapshot).HasMaxLength(100);
+            entity.Property(e => e.CreatedAt).HasColumnType("datetime");
+            entity.HasOne(e => e.OrderDetail)
+                .WithMany(e => e.ComboSelections)
+                .HasForeignKey(e => e.OrderDetailId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CinemaFoodInventory>(entity =>
+        {
+            entity.ToTable("CINEMAFOODINVENTORY");
+            entity.HasKey(x => new { x.CinemaId, x.FoodId });
+            entity.Property(x => x.Status).HasMaxLength(20);
+            entity.Property(x => x.SaleStatus).HasMaxLength(10).HasDefaultValue("ACTIVE");
+            entity.Property(x => x.UpdatedAt).HasColumnType("datetime2");
+            entity.HasOne(x => x.Cinema).WithMany().HasForeignKey(x => x.CinemaId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Food).WithMany().HasForeignKey(x => x.FoodId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CinemaComboSetting>(entity =>
+        {
+            entity.ToTable("CINEMACOMBOSETTINGS");
+            entity.HasKey(x => new { x.CinemaId, x.ComboId });
+            entity.Property(x => x.SaleStatus).HasMaxLength(20).HasDefaultValue("ACTIVE");
+            entity.HasOne(x => x.Cinema).WithMany().HasForeignKey(x => x.CinemaId);
+            entity.HasOne(x => x.Combo).WithMany().HasForeignKey(x => x.ComboId);
+        });
+
+        modelBuilder.Entity<FoodInventoryTransaction>(entity =>
+        {
+            entity.ToTable("FOODINVENTORYTRANSACTIONS");
+            entity.HasKey(x => x.InventoryTransactionId);
+            entity.Property(x => x.TransactionType).HasMaxLength(20);
+            entity.Property(x => x.UnitCost).HasColumnType("decimal(12,2)");
+            entity.Property(x => x.ReferenceType).HasMaxLength(30);
+            entity.Property(x => x.Supplier).HasMaxLength(200);
+            entity.Property(x => x.Notes).HasMaxLength(500);
+            entity.Property(x => x.CreatedAt).HasColumnType("datetime2");
+            entity.HasIndex(x => new { x.ReferenceType, x.ReferenceId, x.TransactionType });
+        });
+
+        modelBuilder.Entity<FoodStockReceipt>(entity =>
+        {
+            entity.ToTable("FOODSTOCKRECEIPTS");
+            entity.HasKey(x => x.ReceiptId);
+            entity.Property(x => x.UnitCost).HasColumnType("decimal(12,2)");
+            entity.Property(x => x.Supplier).HasMaxLength(200);
+            entity.Property(x => x.Notes).HasMaxLength(500);
+            entity.Property(x => x.ReceivedAt).HasColumnType("datetime2");
+            entity.Property(x => x.CreatedAt).HasColumnType("datetime2");
+        });
+
+        modelBuilder.Entity<TicketPricingHistory>(entity =>
+        {
+            entity.HasKey(e => e.HistoryId);
+            entity.ToTable("TICKETPRICING_HISTORY");
+            entity.Property(e => e.SeatType).HasMaxLength(30);
+            entity.Property(e => e.DayType).HasMaxLength(20);
+            entity.Property(e => e.OldPrice).HasColumnType("decimal(12, 2)");
+            entity.Property(e => e.NewPrice).HasColumnType("decimal(12, 2)");
+            entity.Property(e => e.ChangedAt).HasColumnType("datetime2");
         });
 
         modelBuilder.Entity<User>(entity =>
@@ -593,6 +694,40 @@ public partial class CinemaManagementContext : DbContext
                 .HasForeignKey(d => d.CinemaId)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK_USERS_CINEMAS");
+        });
+
+        modelBuilder.Entity<StudentCardVerification>(entity =>
+        {
+            entity.ToTable("STUDENT_CARD_VERIFICATIONS");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.StudentCode).HasMaxLength(50);
+            entity.Property(x => x.StudentName).HasMaxLength(150);
+            entity.Property(x => x.SchoolName).HasMaxLength(200);
+            entity.Property(x => x.ImagePath).HasMaxLength(255);
+            entity.Property(x => x.ImageData).HasColumnType("varbinary(max)");
+            entity.Property(x => x.ImageContentType).HasMaxLength(100);
+            entity.Property(x => x.Status).HasMaxLength(20);
+            entity.Property(x => x.RejectionReason).HasMaxLength(500);
+            entity.Property(x => x.DiscountPercent).HasColumnType("decimal(5,2)");
+            entity.Property(x => x.DiscountAmount).HasColumnType("decimal(12,2)");
+            entity.Property(x => x.RowVersion).IsRowVersion();
+            entity.HasIndex(x => new { x.BookingId, x.Status }).HasDatabaseName("IX_SCV_BOOKING_STATUS");
+            entity.HasIndex(x => new { x.StudentCode, x.Status, x.SubmittedAt }).HasDatabaseName("IX_SCV_STUDENT_STATUS_DATE");
+            entity.HasOne(x => x.Booking).WithMany().HasForeignKey(x => x.BookingId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Customer).WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.SubmittedByStaff).WithMany().HasForeignKey(x => x.SubmittedByStaffId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ReviewedByAdmin).WithMany().HasForeignKey(x => x.ReviewedByAdminId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Cinema).WithMany().HasForeignKey(x => x.CinemaId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<StudentDiscountUsage>(entity =>
+        {
+            entity.ToTable("STUDENT_DISCOUNT_USAGES"); entity.HasKey(x => x.Id);
+            entity.Property(x => x.StudentCode).HasMaxLength(50); entity.Property(x => x.Status).HasMaxLength(20);
+            entity.Property(x => x.DiscountPercent).HasColumnType("decimal(5,2)"); entity.Property(x => x.DiscountAmount).HasColumnType("decimal(12,2)");
+            entity.HasIndex(x => x.VerificationId).IsUnique(); entity.HasIndex(x => new { x.StudentCode, x.Status, x.UsedAt }).HasDatabaseName("IX_SDU_STUDENT_STATUS_DATE");
+            entity.HasOne(x => x.Verification).WithOne(x => x.Usage).HasForeignKey<StudentDiscountUsage>(x => x.VerificationId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Booking).WithMany().HasForeignKey(x => x.BookingId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Userdiscountusage>(entity =>
@@ -683,6 +818,40 @@ public partial class CinemaManagementContext : DbContext
             entity.Property(e => e.RoomType).HasMaxLength(50);
             entity.Property(e => e.StartTime).HasColumnType("datetime");
             entity.Property(e => e.Status).HasMaxLength(30);
+        });
+
+        modelBuilder.Entity<TicketExchange>(entity =>
+        {
+            entity.HasKey(e => e.ExchangeId);
+            entity.ToTable("TICKETEXCHANGES");
+
+            entity.Property(e => e.AdditionalAmount).HasColumnType("decimal(12, 2)");
+            entity.Property(e => e.Status).HasMaxLength(30).HasDefaultValue("PENDING_CASH_PAYMENT");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())").HasColumnType("datetime");
+            entity.Property(e => e.HoldUntil).HasColumnType("datetime");
+
+            entity.HasOne(d => d.Ticket).WithMany()
+                .HasForeignKey(d => d.TicketId)
+                .OnDelete(DeleteBehavior.ClientSetNull);
+
+            entity.HasOne(d => d.OldSeat).WithMany()
+                .HasForeignKey(d => d.OldSeatId)
+                .OnDelete(DeleteBehavior.ClientSetNull);
+
+            entity.HasOne(d => d.NewSeat).WithMany()
+                .HasForeignKey(d => d.NewSeatId)
+                .OnDelete(DeleteBehavior.ClientSetNull);
+
+            entity.HasOne(d => d.ShowTime).WithMany()
+                .HasForeignKey(d => d.ShowTimeId)
+                .OnDelete(DeleteBehavior.ClientSetNull);
+
+            entity.HasOne(d => d.User).WithMany()
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull);
+
+            entity.HasOne(d => d.Staff).WithMany()
+                .HasForeignKey(d => d.StaffId);
         });
 
         OnModelCreatingPartial(modelBuilder);

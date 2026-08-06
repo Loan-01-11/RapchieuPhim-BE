@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RapchieuPhim.API.Constants;
 using RapchieuPhim.API.DTO.DTORequest;
+using RapchieuPhim.API.DTO.DTOResponse;
 using RapchieuPhim.API.Models;
 using RapchieuPhim.API.Services;
 using System.Security.Claims;
@@ -89,6 +90,8 @@ namespace RapchieuPhim.API.Controllers
                         .Include(b => b.Seat)
                         .Include(b => b.ShowTime)
                             .ThenInclude(s => s.Movie)
+                        .Include(b => b.ShowTime)
+                            .ThenInclude(s => s.Room)
                         .ToListAsync();
 
                     foreach (var booking in batchBookings)
@@ -114,29 +117,61 @@ namespace RapchieuPhim.API.Controllers
                 var concessionsInBill = new List<ConcessionBillDetail>();
                 decimal concessionSubtotal = 0;
 
-                if (payment.Order != null)
+                var relatedOrder = payment.Order;
+                if (relatedOrder == null && rootBooking != null)
                 {
-                    concessionSubtotal = payment.Order.TotalAmount;
-                    foreach (var item in payment.Order.Orderitems)
+                    relatedOrder = await _context.Orders.AsNoTracking()
+                        .Include(o => o.Orderitems).ThenInclude(oi => oi.Food)
+                        .Include(o => o.Orderitems).ThenInclude(oi => oi.Combo)
+                        .Include(o => o.Orderitems).ThenInclude(oi => oi.ComboSelections)
+                        .Where(o => o.BookingId == rootBooking.BookingId)
+                        .OrderByDescending(o => o.OrderId)
+                        .FirstOrDefaultAsync();
+                }
+
+                if (relatedOrder != null)
+                {
+                    foreach (var item in relatedOrder.Orderitems)
                     {
+                        var currentName = item.Food?.FoodName ?? item.Combo?.ComboName ?? "Đồ ăn kèm";
+                        var snapshot = OrderItemSnapshotHelper.Parse(item.ComboSelectionSnapshot, currentName);
+                        var storedSelections = item.ComboSelections.Select(selection => new OrderComboComponentResponse
+                        {
+                            FoodId = selection.FoodId,
+                            FoodName = selection.FoodNameSnapshot,
+                            Category = selection.CategorySnapshot,
+                            Quantity = selection.Quantity
+                        }).ToList();
+                        var selections = storedSelections.Count > 0 ? storedSelections : snapshot.ComboSelections;
                         concessionsInBill.Add(new ConcessionBillDetail
                         {
-                            Name = item.Food != null ? item.Food.FoodName : (item.Combo != null ? item.Combo.ComboName : "N/A"),
+                            FoodOrderDetailId = item.OrderItemId,
+                            FoodId = item.FoodId,
+                            ComboId = item.ComboId,
+                            ItemType = item.ComboId.HasValue ? "COMBO" : "FOOD",
+                            ItemNameSnapshot = snapshot.ItemNameSnapshot,
+                            Name = snapshot.ItemNameSnapshot,
                             Quantity = item.Quantity,
+                            UnitPriceSnapshot = item.UnitPrice,
                             UnitPrice = item.UnitPrice,
+                            LineTotal = item.Subtotal,
+                            ComboSelections = selections,
+                            ComboSelectionDataUnavailable = item.ComboId.HasValue && selections.Count == 0,
                             Subtotal = item.Subtotal
                         });
+                        concessionSubtotal += item.Subtotal;
                     }
                 }
 
                 bill.Concessions = concessionsInBill;
                 bill.ConcessionSubtotal = concessionSubtotal;
+                bill.TotalAmount = Math.Max(0, ticketSubtotal + concessionSubtotal - payment.DiscountAmt);
 
                 // Cộng dồn doanh thu tổng quát
                 totalTicketRevenue += ticketSubtotal;
                 totalConcessionRevenue += concessionSubtotal;
                 totalDiscount += payment.DiscountAmt;
-                totalOverallRevenue += payment.TotalAmount;
+                totalOverallRevenue += bill.TotalAmount;
 
                 bills.Add(bill);
             }
@@ -316,10 +351,19 @@ namespace RapchieuPhim.API.Controllers
 
     public class ConcessionBillDetail
     {
+        public int FoodOrderDetailId { get; set; }
+        public int? FoodId { get; set; }
+        public int? ComboId { get; set; }
+        public string ItemType { get; set; } = "FOOD";
+        public string ItemNameSnapshot { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public int Quantity { get; set; }
+        public decimal UnitPriceSnapshot { get; set; }
         public decimal UnitPrice { get; set; }
+        public decimal LineTotal { get; set; }
         public decimal Subtotal { get; set; }
+        public List<OrderComboComponentResponse> ComboSelections { get; set; } = new();
+        public bool ComboSelectionDataUnavailable { get; set; }
     }
 
     public class SendReportRequest

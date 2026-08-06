@@ -107,7 +107,7 @@ namespace RapchieuPhim.API.Controllers
             if (string.IsNullOrWhiteSpace(request.TicketCode))
                 return BadRequest(new { Message = ValidationMessages.TicketCodeRequired });
 
-            var result = await _ticketService.ScanTicketAsync(request.TicketCode);
+            var result = await _ticketService.ScanTicketAsync(request.TicketCode, request.ShowtimeId);
 
             return StatusCode(result.StatusCode, new
             {
@@ -115,6 +115,40 @@ namespace RapchieuPhim.API.Controllers
                 Message = result.Message,
                 Ticket = result.Ticket
             });
+        }
+
+        // POST: api/Tickets/exchange 🔄 (ĐỔI GHẾ TẠI QUẦY - BƯỚC 1: YÊU CẦU ĐỔI GHẾ)
+        [HttpPost("exchange")]
+        [Authorize(Roles = "Admin,Staff")]
+        public async Task<IActionResult> RequestSeatExchange([FromBody] SeatExchangeRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var currentUserId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var result = await _ticketService.RequestSeatExchangeAsync(currentUserId, currentUserId, request);
+
+            if (!result.IsSuccess)
+                return BadRequest(new { Message = result.Message });
+
+            return Ok(result);
+        }
+
+        // POST: api/Tickets/exchange/confirm-cash 💵 (ĐỔI GHẾ TẠI QUẦY - BƯỚC 2: XÁC NHẬN THU TIỀN MẶT)
+        [HttpPost("exchange/confirm-cash")]
+        [Authorize(Roles = "Admin,Staff")]
+        public async Task<IActionResult> ConfirmCashSeatExchange([FromBody] ConfirmCashExchangeRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var currentUserId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var result = await _ticketService.ConfirmCashSeatExchangeAsync(currentUserId, request);
+
+            if (!result.IsSuccess)
+                return BadRequest(new { Message = result.Message });
+
+            return Ok(result);
         }
     }
 }

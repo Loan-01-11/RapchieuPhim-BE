@@ -99,6 +99,24 @@ namespace RapchieuPhim.API.Controllers
                 result.IsSuccess ? result.Data : new { result.Message });
         }
 
+        [HttpPost("Range")]
+        [Authorize(Roles = RoleConstants.Admin)]
+        public async Task<IActionResult> CreateRange([FromBody] CreateSeatRangeRequest request)
+        {
+            if (!ModelState.IsValid) return BadRequest(new { Message = GetFirstError() });
+            var result = await _seatService.CreateRangeAsync(request);
+            return StatusCode(result.StatusCode, result.IsSuccess ? result.Data : new { result.Message });
+        }
+
+        [HttpPut("Room/{roomId:int}/Layout")]
+        [Authorize(Roles = RoleConstants.Admin)]
+        public async Task<IActionResult> UpdateLayout(int roomId, [FromBody] UpdateSeatLayoutRequest request)
+        {
+            if (!ModelState.IsValid) return BadRequest(new { Message = GetFirstError() });
+            var result = await _seatService.UpdateLayoutAsync(roomId, request);
+            return StatusCode(result.StatusCode, result.IsSuccess ? result.Data : new { result.Message });
+        }
+
         // 👑 8. CẬP NHẬT THÔNG TIN GHẾ (CHỈ ADMIN)
         // PUT: api/Seats/{id}
         [HttpPut("{id}")]

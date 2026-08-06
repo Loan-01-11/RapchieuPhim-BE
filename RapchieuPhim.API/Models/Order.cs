@@ -15,6 +15,8 @@ public partial class Order
 
     public int? DiscountId { get; set; }
 
+    public int? CinemaId { get; set; }
+
     public DateTime OrderDate { get; set; }
 
     public decimal TotalAmount { get; set; }

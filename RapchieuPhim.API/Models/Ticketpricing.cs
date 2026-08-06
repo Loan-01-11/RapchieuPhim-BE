@@ -7,6 +7,8 @@ public partial class Ticketpricing
 {
     public int PricingId { get; set; }
 
+    public int? RoomId { get; set; }
+
     public string? RoomType { get; set; }
 
     public string? SeatType { get; set; }
@@ -24,4 +26,6 @@ public partial class Ticketpricing
     public int CreatedBy { get; set; }
 
     public virtual User CreatedByNavigation { get; set; } = null!;
+
+    public virtual Room? Room { get; set; }
 }

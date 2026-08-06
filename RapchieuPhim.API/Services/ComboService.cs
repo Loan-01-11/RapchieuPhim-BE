@@ -30,6 +30,22 @@ namespace RapchieuPhim.API.Services
             _context = context;
         }
 
+        private async Task<(bool Valid, string Message)> ValidateComponentsAsync(ComboRequest request)
+        {
+            var items = request.FoodItems;
+            if (request.DrinkSlotCount + request.PopcornSlotCount <= 0)
+                return (false, "Combo phải có ít nhất một slot nước hoặc bắp.");
+            if (items == null || items.Count == 0) return (false, "Combo phải có thành phần nước uống và bắp rang.");
+            if (items.GroupBy(x => x.FoodId).Any(g => g.Count() > 1))
+                return (false, "Thành phần Combo bị trùng hoặc có số lượng không hợp lệ.");
+            var ids = items.Select(x => x.FoodId).ToList();
+            var foods = await _context.Foods.AsNoTracking().Where(x => ids.Contains(x.FoodId)).ToListAsync();
+            if (foods.Count != ids.Count) return (false, "Có món thành phần không tồn tại.");
+            var hasDrink = foods.Any(x => (x.Category ?? "").ToLower().Contains("nước"));
+            var hasPopcorn = foods.Any(x => (x.Category ?? "").ToLower().Contains("bắp"));
+            return hasDrink && hasPopcorn ? (true, "") : (false, "Combo phải có ít nhất một Nước uống và một Bắp rang.");
+        }
+
         // ── Helper: Ánh xạ Entity → Response DTO ─────────────────────────────────
         private static ComboResponse MapToResponse(Combo c) => new()
         {
@@ -40,6 +56,9 @@ namespace RapchieuPhim.API.Services
             ImageUrl = c.ImageUrl,
             Quantity = c.Quantity,
             IsAvailable = c.IsAvailable,
+            AllowsCustomization = c.AllowsCustomization,
+            DrinkSlotCount = c.DrinkSlotCount,
+            PopcornSlotCount = c.PopcornSlotCount,
             SoldThisMonth = c.Orderitems != null ? c.Orderitems.Where(oi => oi.Order.OrderDate.Month == DateTime.Now.Month && oi.Order.OrderDate.Year == DateTime.Now.Year).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
             RevenueThisMonth = c.Orderitems != null ? c.Orderitems.Where(oi => oi.Order.OrderDate.Month == DateTime.Now.Month && oi.Order.OrderDate.Year == DateTime.Now.Year).Sum(oi => (decimal?)oi.Subtotal) ?? 0m : 0m,
             SoldToday = c.Orderitems != null ? c.Orderitems.Where(oi => oi.Order.OrderDate.Date == DateTime.Now.Date).Sum(oi => (int?)oi.Quantity) ?? 0 : 0,
@@ -52,7 +71,8 @@ namespace RapchieuPhim.API.Services
                 FoodName = m.Food.FoodName,
                 Category = m.Food.Category,
                 UnitPrice = m.Food.Price,
-                Quantity = m.Quantity
+                Quantity = 0,
+                ItemType = (m.Food.Category ?? "").ToLower().Contains("nước") ? "DRINK" : "POPCORN"
             }).ToList()
         };
 
@@ -87,13 +107,14 @@ namespace RapchieuPhim.API.Services
         }
 
         /// <summary>
-        /// Lấy danh sách combo đang bán (IsAvailable = true và còn hàng).
+        /// Lấy danh sách combo đang bán. Số lượng khả dụng được tính theo tồn kho
+        /// thành phần tại từng rạp qua FoodInventoryController, không dùng Combo.Quantity.
         /// Quyền: Tất cả người dùng đã đăng nhập.
         /// </summary>
         public async Task<List<ComboResponse>> GetAvailableAsync()
         {
             var combos = await QueryWithFoods()
-                .Where(c => c.IsAvailable && c.Quantity > 0)
+                .Where(c => c.IsAvailable && c.Combofoodmappings.Any())
                 .OrderBy(c => c.ComboName)
                 .ToListAsync();
             return combos.Select(MapToResponse).ToList();
@@ -105,11 +126,15 @@ namespace RapchieuPhim.API.Services
         /// </summary>
         public async Task<(bool IsSuccess, string Message, int StatusCode, ComboResponse? Data)> CreateAsync(ComboRequest request)
         {
+            var componentValidation = await ValidateComponentsAsync(request);
+            if (!componentValidation.Valid) return (false, componentValidation.Message, 400, null);
             // 1. Kiểm tra trùng tên combo
             bool exists = await _context.Combos.AnyAsync(c =>
                 c.ComboName.ToLower() == request.ComboName.ToLower().Trim());
             if (exists)
                 return (false, ComboMessages.ComboNameAlreadyExists, 409, null);
+
+            await using var transaction = await _context.Database.BeginTransactionAsync();
 
             // 2. Tạo Combo
             var combo = new Combo
@@ -118,8 +143,11 @@ namespace RapchieuPhim.API.Services
                 Price = request.Price,
                 Description = request.Description?.Trim(),
                 ImageUrl = request.ImageUrl?.Trim(),
-                Quantity = request.Quantity,
+                Quantity = 0,
                 IsAvailable = request.IsAvailable
+                ,AllowsCustomization = request.AllowsCustomization,
+                DrinkSlotCount = request.DrinkSlotCount,
+                PopcornSlotCount = request.PopcornSlotCount
             };
             _context.Combos.Add(combo);
             await _context.SaveChangesAsync(); // Lấy ComboId mới
@@ -138,11 +166,13 @@ namespace RapchieuPhim.API.Services
                     {
                         ComboId = combo.ComboId,
                         FoodId = item.FoodId,
-                        Quantity = item.Quantity
+                        Quantity = 0
                     });
                 }
                 await _context.SaveChangesAsync();
             }
+
+            await transaction.CommitAsync();
 
             // 4. Load lại combo đầy đủ để trả về response
             var created = await QueryWithFoods().FirstOrDefaultAsync(c => c.ComboId == combo.ComboId);
@@ -170,12 +200,18 @@ namespace RapchieuPhim.API.Services
             if (nameConflict)
                 return (false, ComboMessages.ComboNameAlreadyExists, 409);
 
+            var componentValidation = await ValidateComponentsAsync(request);
+            if (!componentValidation.Valid) return (false, componentValidation.Message, 400);
+
             combo.ComboName = request.ComboName.Trim();
             combo.Price = request.Price;
             combo.Description = request.Description?.Trim();
             combo.ImageUrl = request.ImageUrl?.Trim();
-            combo.Quantity = request.Quantity;
+            combo.Quantity = 0;
             combo.IsAvailable = request.IsAvailable;
+            combo.AllowsCustomization = request.AllowsCustomization;
+            combo.DrinkSlotCount = request.DrinkSlotCount;
+            combo.PopcornSlotCount = request.PopcornSlotCount;
 
             // Nếu request có kèm FoodItems → thay thế toàn bộ danh sách món
             if (request.FoodItems != null)
@@ -193,7 +229,7 @@ namespace RapchieuPhim.API.Services
                     {
                         ComboId = id,
                         FoodId = item.FoodId,
-                        Quantity = item.Quantity
+                        Quantity = 0
                     });
                 }
             }

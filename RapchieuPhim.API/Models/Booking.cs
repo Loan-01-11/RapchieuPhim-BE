@@ -27,6 +27,8 @@ public partial class Booking
 
     public int? StaffId { get; set; }
 
+    public int? ShiftId { get; set; }
+
     public string Status { get; set; } = null!;
 
     public virtual Discount? Discount { get; set; }

@@ -30,5 +30,9 @@ namespace RapchieuPhim.API.DTOs.DTOResponse
         public string? AccountNo          { get; set; }
         public string? AccountName        { get; set; }
         public string? PaymentDescription { get; set; }
+        public string InvoiceCode { get; set; } = string.Empty;
+        public decimal TicketTotal { get; set; }
+        public decimal FoodTotal { get; set; }
+        public List<RapchieuPhim.API.DTO.DTOResponse.OrderItemResponse> FoodItems { get; set; } = new();
     }
 }

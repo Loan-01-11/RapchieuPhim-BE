@@ -5,6 +5,8 @@ namespace RapchieuPhim.API.DTOs.DTORequest
 {
     public class TicketPricingRequest
     {
+        public int? RoomId { get; set; }
+
         [StringLength(50, ErrorMessage = ValidationMessages.PricingRoomTypeMaxLength)]
         public string? RoomType { get; set; } // 2D | 3D | IMAX | 4DX ; NULL = tất cả
 
@@ -15,7 +17,7 @@ namespace RapchieuPhim.API.DTOs.DTORequest
         public string? DayType { get; set; }   // Weekday | Weekend | Holiday ; NULL = tất cả
 
         [Required]
-        [Range(0, double.MaxValue, ErrorMessage = ValidationMessages.PricingPriceInvalid)]
+        [Range(typeof(decimal), "0.01", "999999999", ErrorMessage = ValidationMessages.PricingPriceInvalid)]
         public decimal Price { get; set; }
 
         [Required]

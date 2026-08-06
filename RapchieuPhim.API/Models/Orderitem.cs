@@ -19,9 +19,13 @@ public partial class Orderitem
 
     public decimal Subtotal { get; set; }
 
+    public string? ComboSelectionSnapshot { get; set; }
+
     public virtual Combo? Combo { get; set; }
 
     public virtual Food? Food { get; set; }
 
     public virtual Order Order { get; set; } = null!;
+
+    public virtual ICollection<OrderComboSelection> ComboSelections { get; set; } = new List<OrderComboSelection>();
 }

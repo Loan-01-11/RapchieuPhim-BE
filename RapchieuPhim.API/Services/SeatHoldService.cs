@@ -10,10 +10,13 @@ namespace RapchieuPhim.API.Services
     public interface ISeatHoldService
     {
         /// <summary>Giữ ghế tạm thời. Trả về holdKey nếu thành công, null nếu ghế đã được giữ.</summary>
-        (bool IsSuccess, string Message, string? HoldKey) HoldSeat(int userId, int showTimeId, int seatId);
+        (bool IsSuccess, string Message, string? HoldKey) HoldSeat(int userId, int showTimeId, int seatId, int minutes = 5);
 
         /// <summary>Huỷ giữ ghế theo holdKey.</summary>
         (bool IsSuccess, string Message) ReleaseHold(string holdKey, int userId);
+
+        /// <summary>Huỷ giữ ghế theo showTimeId và seatId.</summary>
+        void ReleaseSeatBySeat(int showTimeId, int seatId);
 
         /// <summary>Kiểm tra ghế còn trống không (không bị giữ và không bị booked).</summary>
         bool IsSeatHeld(int showTimeId, int seatId);
@@ -53,13 +56,13 @@ namespace RapchieuPhim.API.Services
         //   - holdKey  → lưu theo lần giữ, dùng để client release đúng ghế
         // Cả hai entry đều có cùng AbsoluteExpiration = 5 phút
         // ─────────────────────────────────────────────────────────────────────
-        public (bool IsSuccess, string Message, string? HoldKey) HoldSeat(int userId, int showTimeId, int seatId)
+        public (bool IsSuccess, string Message, string? HoldKey) HoldSeat(int userId, int showTimeId, int seatId, int minutes = 5)
         {
             var seatKey = SeatKey(showTimeId, seatId);
 
+            int holdDuration = minutes > 0 ? minutes : HoldMinutes;
+
             // Kiểm tra ghế đã bị giữ chưa
-            // → nếu chính user này đang giữ → báo đã giữ rồi
-            // → nếu user khác đang giữ → báo ghế đang bận kèm thời hạn hết giữ
             if (_cache.TryGetValue(seatKey, out SeatHoldInfo? existing))
             {
                 if (existing!.UserId == userId)
@@ -69,21 +72,24 @@ namespace RapchieuPhim.API.Services
             }
 
             var holdKey   = NewHoldKey(showTimeId, seatId);
-            var heldUntil = DateTime.Now.AddMinutes(HoldMinutes);
+            var heldUntil = DateTime.Now.AddMinutes(holdDuration);
             var holdInfo  = new SeatHoldInfo(userId, showTimeId, seatId, heldUntil);
 
-            // Cache tự động xoá sau 5 phút (AbsoluteExpiration)
             var options = new MemoryCacheEntryOptions
             {
                 AbsoluteExpiration = heldUntil
             };
 
-            // Lưu theo seatKey để kiểm tra xung đột nhanh khi ai khác muốn giữ cùng ghế
             _cache.Set(seatKey, holdInfo, options);
-            // Lưu theo holdKey để client có thể huỷ giữ ghế trước khi hết 5 phút
             _cache.Set($"{HoldPrefix}key:{holdKey}", holdInfo, options);
 
-            return (true, SeatHoldMessages.HoldSuccess(HoldMinutes, heldUntil.ToString("HH:mm:ss")), holdKey);
+            return (true, SeatHoldMessages.HoldSuccess(holdDuration, heldUntil.ToString("HH:mm:ss")), holdKey);
+        }
+
+        public void ReleaseSeatBySeat(int showTimeId, int seatId)
+        {
+            var seatKey = SeatKey(showTimeId, seatId);
+            _cache.Remove(seatKey);
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -96,7 +102,7 @@ namespace RapchieuPhim.API.Services
         {
             var fullKey = $"{HoldPrefix}key:{holdKey}";
 
-            // Không tìm thấy → đã hết hạn 5 phút hoặc holdKey sai
+            // Không tìm thấy → đã hết hạn hoặc holdKey sai
             if (!_cache.TryGetValue(fullKey, out SeatHoldInfo? info))
                 return (false, SeatHoldMessages.HoldNotFound);
 

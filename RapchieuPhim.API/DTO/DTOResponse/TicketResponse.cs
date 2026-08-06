@@ -14,6 +14,9 @@ namespace RapchieuPhim.API.DTOs.DTOResponse
         public string? CustomerName { get; set; }
         public string? MovieTitle { get; set; }
         public string? SeatCode { get; set; }
+        public string? SeatRow { get; set; }
+        public string? SeatNumber { get; set; }
+        public string? SeatType { get; set; }
         public string? AreaName { get; set; }
         public int? CinemaId { get; set; }
         public string? CinemaName { get; set; }
